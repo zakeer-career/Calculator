@@ -206,6 +206,10 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     private val _showLivePreview = MutableStateFlow(prefs.getBoolean("show_live_preview", true))
     val showLivePreview: StateFlow<Boolean> = _showLivePreview.asStateFlow()
 
+    // --- ULTRA PERFORMANCE MODE (Lag-Free / High FPS) ---
+    private val _ultraPerformanceMode = MutableStateFlow(prefs.getBoolean("ultra_performance_mode", false))
+    val ultraPerformanceMode: StateFlow<Boolean> = _ultraPerformanceMode.asStateFlow()
+
     // --- LIVE PREVIEW ANIMATION (DEFAULT OFF) ---
     private val _livePreviewAnimEnabled = MutableStateFlow(prefs.getBoolean("live_preview_anim_enabled", false))
     val livePreviewAnimEnabled: StateFlow<Boolean> = _livePreviewAnimEnabled.asStateFlow()
@@ -1452,6 +1456,11 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         prefs.edit().putBoolean("top_history_banner", show).apply()
     }
 
+    fun setUltraPerformanceMode(enabled: Boolean) {
+        _ultraPerformanceMode.value = enabled
+        prefs.edit().putBoolean("ultra_performance_mode", enabled).apply()
+    }
+
     fun setLivePreviewAnimEnabled(enabled: Boolean) {
         _livePreviewAnimEnabled.value = enabled
         prefs.edit().putBoolean("live_preview_anim_enabled", enabled).apply()
@@ -1528,6 +1537,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         json.put("adaptive_theme_enabled", adaptiveThemeEnabled.value)
         json.put("theme_contrast_mode", themeContrastMode.value)
         json.put("top_history_banner", topHistoryBannerVisible.value)
+        json.put("ultra_performance_mode", ultraPerformanceMode.value)
         json.put("haptic_feedback", hapticFeedbackEnabled.value)
         json.put("show_bottom_bar", showBottomBar.value)
         json.put("nav_bar_style", navBarStyle.value)
@@ -1725,6 +1735,11 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
                 val v = json.getDouble("nav_bar_blur_opacity").toFloat()
                 editor.putFloat("nav_bar_blur_opacity", v)
                 pendingFlowUpdates.add { _navBarBlurOpacity.value = v }
+            }
+            if (json.has("ultra_performance_mode")) {
+                val v = json.getBoolean("ultra_performance_mode")
+                editor.putBoolean("ultra_performance_mode", v)
+                pendingFlowUpdates.add { _ultraPerformanceMode.value = v }
             }
 
             val committed = editor.commit()

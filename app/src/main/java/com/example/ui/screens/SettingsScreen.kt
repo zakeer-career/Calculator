@@ -130,6 +130,7 @@ fun SettingsScreen(viewModel: CalculatorViewModel) {
     val displayAlign by viewModel.displayAlign.collectAsStateWithLifecycle()
     val showLivePreview by viewModel.showLivePreview.collectAsStateWithLifecycle()
     val numberAnimationType by viewModel.numberAnimationType.collectAsStateWithLifecycle()
+    val ultraPerformanceMode by viewModel.ultraPerformanceMode.collectAsStateWithLifecycle()
 
     val displayHeightDp by viewModel.displayHeightDp.collectAsStateWithLifecycle()
     val displayWidthPaddingDp by viewModel.displayWidthPaddingDp.collectAsStateWithLifecycle()
@@ -278,6 +279,31 @@ fun SettingsScreen(viewModel: CalculatorViewModel) {
                                 modifier = Modifier.testTag("display_align_left")
                             )
                         }
+
+                        HorizontalDivider()
+
+                        // Ultra Performance Mode Toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Ultra Performance Mode (Max FPS)", fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Disables complex slide transitions & blur effects for zero-lag, instant keystroke response",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = ultraPerformanceMode,
+                                onCheckedChange = { viewModel.setUltraPerformanceMode(it) },
+                                modifier = Modifier.testTag("ultra_performance_mode_switch")
+                            )
+                        }
+
+                        HorizontalDivider()
 
                         Text("Number Entry Animation", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                         Row(

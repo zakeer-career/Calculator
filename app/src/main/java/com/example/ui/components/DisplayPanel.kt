@@ -104,6 +104,7 @@ fun DisplayPanel(
     customMainFontSizeSp: Int = 34,
     customPreviewFontSizeSp: Int = 24,
     lockKeypadHeight: Boolean = true,
+    ultraPerformanceMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val activeTheme = CalculatorTheme.current
@@ -112,7 +113,7 @@ fun DisplayPanel(
     }
     val scrollState = rememberScrollState()
     LaunchedEffect(currentTfv.text) {
-        scrollState.animateScrollTo(scrollState.maxValue)
+        scrollState.scrollTo(scrollState.maxValue)
     }
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -369,16 +370,17 @@ fun DisplayPanel(
 
                 val softwareKeyboardController = LocalSoftwareKeyboardController.current
 
+                val effectiveAnimType = if (ultraPerformanceMode) "OFF" else numberAnimationType
                 var numberPulseTrigger by remember { mutableStateOf(false) }
                 LaunchedEffect(currentTfv.text) {
-                    if (currentTfv.text.isNotEmpty() && numberAnimationType != "OFF") {
+                    if (currentTfv.text.isNotEmpty() && effectiveAnimType != "OFF") {
                         numberPulseTrigger = true
                         kotlinx.coroutines.delay(120)
                         numberPulseTrigger = false
                     }
                 }
 
-                val isAnimEnabled = numberAnimationType != "OFF"
+                val isAnimEnabled = effectiveAnimType != "OFF"
                 val numberEntryScale by animateFloatAsState(
                     targetValue = if (isAnimEnabled && numberPulseTrigger) 1.06f else 1.0f,
                     animationSpec = spring(
@@ -394,7 +396,7 @@ fun DisplayPanel(
                             .fillMaxWidth()
                             .horizontalScroll(scrollState)
                             .graphicsLayer {
-                                if (numberAnimationType == "SPRING_BOUNCE" || numberAnimationType == "SCALE_POP") {
+                                if (effectiveAnimType == "SPRING_BOUNCE" || effectiveAnimType == "SCALE_POP") {
                                     scaleX = numberEntryScale
                                     scaleY = numberEntryScale
                                 }
@@ -406,7 +408,7 @@ fun DisplayPanel(
                             else -> Alignment.CenterEnd
                         }
                     ) {
-                        if (numberAnimationType == "VERTICAL_SLIDE") {
+                        if (effectiveAnimType == "VERTICAL_SLIDE") {
                             AnimatedContent(
                                 targetState = currentTfv.text,
                                 transitionSpec = {
@@ -455,7 +457,7 @@ fun DisplayPanel(
                                     )
                                 )
                             }
-                        } else if (numberAnimationType == "FADE_PULSE") {
+                        } else if (effectiveAnimType == "FADE_PULSE") {
                             AnimatedContent(
                                 targetState = currentTfv.text,
                                 transitionSpec = {
@@ -592,7 +594,7 @@ fun DisplayPanel(
                                 modifier = Modifier.padding(end = 4.dp)
                             )
                         }
-                        if (livePreviewAnimEnabled) {
+                        if (livePreviewAnimEnabled && !ultraPerformanceMode) {
                             AnimatedContent(
                                 targetState = displayResult,
                                 transitionSpec = {

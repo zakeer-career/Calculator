@@ -111,6 +111,7 @@ fun StandardCalculatorScreen(
     val showLivePreview by viewModel.showLivePreview.collectAsStateWithLifecycle()
     val numberAnimationType by viewModel.numberAnimationType.collectAsStateWithLifecycle()
     val themePreset by viewModel.themePreset.collectAsStateWithLifecycle()
+    val ultraPerformanceMode by viewModel.ultraPerformanceMode.collectAsStateWithLifecycle()
 
     val livePreviewAnimEnabled by viewModel.livePreviewAnimEnabled.collectAsStateWithLifecycle()
     val adaptiveDisplayResizing by viewModel.adaptiveDisplayResizing.collectAsStateWithLifecycle()
@@ -201,7 +202,8 @@ fun StandardCalculatorScreen(
                         customCornerRadiusDp = displayCornerRadiusDp,
                         customMainFontSizeSp = displayMainFontSizeSp,
                         customPreviewFontSizeSp = displayPreviewFontSizeSp,
-                        lockKeypadHeight = lockKeypadHeight
+                        lockKeypadHeight = lockKeypadHeight,
+                        ultraPerformanceMode = ultraPerformanceMode
                     )
 
                     // Futuristic Live Currency Bar
@@ -390,6 +392,7 @@ fun StandardCalculatorScreen(
                     customMainFontSizeSp = displayMainFontSizeSp,
                     customPreviewFontSizeSp = displayPreviewFontSizeSp,
                     lockKeypadHeight = lockKeypadHeight,
+                    ultraPerformanceMode = ultraPerformanceMode,
                     modifier = Modifier.weight(1f, fill = false)
                 )
 

@@ -105,6 +105,7 @@ fun ScientificCalculatorScreen(
     val displayMainFontSizeSp by viewModel.displayMainFontSizeSp.collectAsStateWithLifecycle()
     val displayPreviewFontSizeSp by viewModel.displayPreviewFontSizeSp.collectAsStateWithLifecycle()
     val lockKeypadHeight by viewModel.lockKeypadHeight.collectAsStateWithLifecycle()
+    val ultraPerformanceMode by viewModel.ultraPerformanceMode.collectAsStateWithLifecycle()
 
     var showHistoryBarCustomizationSheet by remember { mutableStateOf(false) }
     var showCurrencyHeaderCustomizationSheet by remember { mutableStateOf(false) }
@@ -170,7 +171,8 @@ fun ScientificCalculatorScreen(
                 customCornerRadiusDp = displayCornerRadiusDp,
                 customMainFontSizeSp = displayMainFontSizeSp,
                 customPreviewFontSizeSp = displayPreviewFontSizeSp,
-                lockKeypadHeight = lockKeypadHeight
+                lockKeypadHeight = lockKeypadHeight,
+                ultraPerformanceMode = ultraPerformanceMode
             )
 
             // Toolbar
