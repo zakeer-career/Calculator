@@ -468,7 +468,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         initSampleMatrix()
 
         // Load persistent currency cache if available
-        val cached = CurrencyRepository.loadCache(application)
+        val cached = CurrencyRepository.loadCache(getApplication<Application>())
         if (cached != null) {
             _exchangeState.value = cached
         }
@@ -803,7 +803,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     fun refreshCurrencyRates() {
         viewModelScope.launch {
             _exchangeState.value = _exchangeState.value.copy(isLoading = true)
-            val updatedState = CurrencyRepository.fetchRealtimeRates(application)
+            val updatedState = CurrencyRepository.fetchRealtimeRates(getApplication<Application>())
             _exchangeState.value = updatedState
             calculateCurrencyConversion()
         }
