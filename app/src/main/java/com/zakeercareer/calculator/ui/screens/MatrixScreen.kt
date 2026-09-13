@@ -28,6 +28,8 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +49,7 @@ import com.zakeercareer.calculator.ui.viewmodel.CalculatorViewModel
 
 @Composable
 fun MatrixScreen(viewModel: CalculatorViewModel) {
+    val haptic = LocalHapticFeedback.current
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Matrix A, 1: Matrix B, 2: Scalar k
     val aRows by viewModel.matrixARows.collectAsStateWithLifecycle()
     val aCols by viewModel.matrixACols.collectAsStateWithLifecycle()
@@ -267,8 +270,8 @@ fun MatrixEditor(
                                         }
                                     },
                                     modifier = Modifier
-                                        .width(72.dp)
-                                        .height(56.dp)
+                                        .widthIn(min = 72.dp)
+                                        
                                         .onFocusChanged { focusState ->
                                             if (!focusState.isFocused) {
                                                 val num = textState.trim().toDoubleOrNull() ?: 0.0

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +37,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,6 +58,7 @@ import com.zakeercareer.calculator.util.UnitItem
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UnitConverterScreen(
+    val haptic = LocalHapticFeedback.current
     viewModel: CalculatorViewModel,
     selectedCategory: UnitCategory,
     inputValue: String,
@@ -146,7 +150,7 @@ fun UnitConverterScreen(
             contentAlignment = Alignment.Center
         ) {
             FilledTonalIconButton(
-                onClick = { viewModel.swapUnits() },
+                onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); viewModel.swapUnits() },
                 modifier = Modifier.testTag("unit_swap_btn")
             ) {
                 Icon(Icons.Default.SwapVert, contentDescription = "Swap Units")
@@ -224,7 +228,7 @@ fun UnitConverterScreen(
 
         // Save Conversion to History Button
         ElevatedButton(
-            onClick = { viewModel.saveUnitConversionHistory() },
+            onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.saveUnitConversionHistory() },
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("save_unit_history_btn")
@@ -234,5 +238,6 @@ fun UnitConverterScreen(
         }
 
         Spacer(modifier = Modifier.height(88.dp))
+        Spacer(modifier = Modifier.navigationBarsPadding().height(80.dp))
     }
 }
