@@ -441,10 +441,10 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                     )
                     Text(
                         "To install this app directly on your Android phone without ADB or a PC:\n\n" +
-                        "1. Tap the \047Install\047 or \047Download APK\047 button at the top right of the AI Studio window.\n" +
-                        "2. Open your Android phone\047s Downloads folder or browser downloads.\n" +
+                        "1. Tap the 'Install' or 'Download APK' button at the top right of the AI Studio window.\n" +
+                        "2. Open your Android phone's Downloads folder or browser downloads.\n" +
                         "3. Tap the downloaded .apk file.\n" +
-                        "4. If prompted, allow \047Install from unknown sources\047 for your browser or file manager."
+                        "4. If prompted, allow 'Install from unknown sources' for your browser or file manager."
                     )
                 }
             },
