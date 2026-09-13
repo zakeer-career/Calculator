@@ -129,7 +129,7 @@ fun CurrencyConverterScreen(
                 .fillMaxWidth()
                 .testTag("currency_amount_field"),
             singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
         )
 
         // From Currency Card -> Swap Button -> To Currency Card

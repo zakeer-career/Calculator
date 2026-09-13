@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -237,24 +238,41 @@ fun MatrixEditor(
                         ) {
                             for (c in 0 until cols) {
                                 val cellValue = matrix.getOrNull(r)?.getOrNull(c) ?: 0.0
-                                var textState by remember(r, c, cellValue) {
+                                var textState by remember(r, c) {
                                     mutableStateOf(if (cellValue == 0.0) "0" else cellValue.toString().removeSuffix(".0"))
+                                }
+                                var lastSyncedValue by remember(r, c) { mutableStateOf(cellValue) }
+
+                                if (cellValue != lastSyncedValue) {
+                                    textState = if (cellValue == 0.0) "0" else cellValue.toString().removeSuffix(".0")
+                                    lastSyncedValue = cellValue
                                 }
 
                                 OutlinedTextField(
                                     value = textState,
                                     onValueChange = { input ->
                                         textState = input
-                                        val num = input.toDoubleOrNull()
-                                        if (num != null) {
+                                        val cleanInput = input.trim()
+                                        val num = cleanInput.toDoubleOrNull()
+                                        if (num != null && !cleanInput.endsWith(".") && !cleanInput.endsWith(",")) {
+                                            lastSyncedValue = num
                                             onCellChanged(r, c, num)
-                                        } else if (input.isBlank() || input == "-") {
+                                        } else if (cleanInput.isBlank()) {
+                                            lastSyncedValue = 0.0
                                             onCellChanged(r, c, 0.0)
                                         }
                                     },
                                     modifier = Modifier
                                         .width(72.dp)
-                                        .height(56.dp),
+                                        .height(56.dp)
+                                        .onFocusChanged { focusState ->
+                                            if (!focusState.isFocused) {
+                                                val num = textState.trim().toDoubleOrNull() ?: 0.0
+                                                textState = if (num == 0.0) "0" else num.toString().removeSuffix(".0")
+                                                lastSyncedValue = num
+                                                onCellChanged(r, c, num)
+                                            }
+                                        },
                                     singleLine = true,
                                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                                         textAlign = TextAlign.Center,
@@ -276,8 +294,14 @@ fun ScalarEditor(
     scalarK: Double,
     onScalarChanged: (Double) -> Unit
 ) {
-    var textValue by remember(scalarK) {
+    var textValue by remember {
         mutableStateOf(if (scalarK == 0.0) "0" else scalarK.toString().removeSuffix(".0"))
+    }
+    var lastSyncedScalar by remember { mutableStateOf(scalarK) }
+
+    if (scalarK != lastSyncedScalar) {
+        textValue = if (scalarK == 0.0) "0" else scalarK.toString().removeSuffix(".0")
+        lastSyncedScalar = scalarK
     }
 
     Card(
@@ -302,16 +326,27 @@ fun ScalarEditor(
                 value = textValue,
                 onValueChange = { input ->
                     textValue = input
-                    val num = input.toDoubleOrNull()
-                    if (num != null) {
+                    val clean = input.trim()
+                    val num = clean.toDoubleOrNull()
+                    if (num != null && !clean.endsWith(".") && !clean.endsWith(",")) {
+                        lastSyncedScalar = num
                         onScalarChanged(num)
-                    } else if (input.isBlank()) {
+                    } else if (clean.isBlank()) {
+                        lastSyncedScalar = 0.0
                         onScalarChanged(0.0)
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("scalar_k_input"),
+                    .testTag("scalar_k_input")
+                    .onFocusChanged { focusState ->
+                        if (!focusState.isFocused) {
+                            val num = textValue.trim().toDoubleOrNull() ?: 0.0
+                            textValue = if (num == 0.0) "0" else num.toString().removeSuffix(".0")
+                            lastSyncedScalar = num
+                            onScalarChanged(num)
+                        }
+                    },
                 label = { Text("Scalar k") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)

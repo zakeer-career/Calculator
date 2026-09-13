@@ -1,9 +1,17 @@
 package com.example.data.db
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "calculation_history")
+@Entity(
+    tableName = "calculation_history",
+    indices = [
+        Index(value = ["isTrash", "timestamp"]),
+        Index(value = ["isTrash", "category", "timestamp"]),
+        Index(value = ["isTrash", "isFavorite", "timestamp"])
+    ]
+)
 data class CalculationEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

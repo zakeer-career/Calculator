@@ -231,11 +231,6 @@ fun HistoryScreen(
             }
         } else {
             val listState = rememberLazyListState()
-            LaunchedEffect(historyList.size) {
-                if (historyList.isNotEmpty()) {
-                    listState.animateScrollToItem(0)
-                }
-            }
 
             LazyColumn(
                 state = listState,

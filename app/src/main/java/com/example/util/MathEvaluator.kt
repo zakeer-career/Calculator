@@ -367,15 +367,45 @@ object MathEvaluator {
                     val a = stack.removeAt(stack.lastIndex)
                     val radVal = if (isDegreeMode) Math.toRadians(a) else a
                     val res = when (token) {
-                        "sin" -> sin(radVal)
-                        "cos" -> cos(radVal)
+                        "sin" -> {
+                            if (isDegreeMode) {
+                                val normDeg = ((a % 360.0) + 360.0) % 360.0
+                                when {
+                                    normDeg == 0.0 || normDeg == 180.0 || normDeg == 360.0 -> 0.0
+                                    normDeg == 90.0 -> 1.0
+                                    normDeg == 270.0 -> -1.0
+                                    normDeg == 30.0 || normDeg == 150.0 -> 0.5
+                                    normDeg == 210.0 || normDeg == 330.0 -> -0.5
+                                    else -> sin(radVal)
+                                }
+                            } else {
+                                sin(radVal)
+                            }
+                        }
+                        "cos" -> {
+                            if (isDegreeMode) {
+                                val normDeg = ((a % 360.0) + 360.0) % 360.0
+                                when {
+                                    normDeg == 90.0 || normDeg == 270.0 -> 0.0
+                                    normDeg == 0.0 || normDeg == 360.0 -> 1.0
+                                    normDeg == 180.0 -> -1.0
+                                    normDeg == 60.0 || normDeg == 300.0 -> 0.5
+                                    normDeg == 120.0 || normDeg == 240.0 -> -0.5
+                                    else -> cos(radVal)
+                                }
+                            } else {
+                                cos(radVal)
+                            }
+                        }
                         "tan" -> {
                             if (isDegreeMode) {
-                                val norm = abs(a) % 180.0
-                                if (abs(norm - 90.0) < 1e-9) {
-                                    Double.NaN // Undefined at 90 deg + k * 180 deg
-                                } else {
-                                    tan(radVal)
+                                val normDeg = ((a % 360.0) + 360.0) % 360.0
+                                when {
+                                    normDeg == 90.0 || normDeg == 270.0 -> Double.NaN // Undefined at 90 deg + k * 180 deg
+                                    normDeg == 0.0 || normDeg == 180.0 || normDeg == 360.0 -> 0.0
+                                    normDeg == 45.0 || normDeg == 225.0 -> 1.0
+                                    normDeg == 135.0 || normDeg == 315.0 -> -1.0
+                                    else -> tan(radVal)
                                 }
                             } else {
                                 val norm = abs(a - PI / 2) % PI

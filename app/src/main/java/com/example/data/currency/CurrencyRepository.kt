@@ -290,9 +290,10 @@ object CurrencyRepository {
     }
 
     suspend fun fetchRealtimeRates(context: Context? = null): ExchangeRatesState = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
         try {
             val url = URL("https://open.er-api.com/v6/latest/USD")
-            val connection = url.openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connectTimeout = 6000
             connection.readTimeout = 6000
@@ -365,6 +366,8 @@ object CurrencyRepository {
                     error = "Network offline. Using fallback exchange rates."
                 )
             }
+        } finally {
+            connection?.disconnect()
         }
     }
 

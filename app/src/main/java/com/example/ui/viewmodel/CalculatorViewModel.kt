@@ -359,6 +359,8 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     private val _textFieldValue = MutableStateFlow(TextFieldValue(text = "", selection = TextRange.Zero))
     val textFieldValue: StateFlow<TextFieldValue> = _textFieldValue.asStateFlow()
 
+    private var isResultFresh = false
+
     private val _previewResult = MutableStateFlow("0")
     val previewResult: StateFlow<String> = _previewResult.asStateFlow()
 
@@ -493,30 +495,43 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
 
     // --- CALCULATOR ACTIONS ---
     fun onExpressionValueChange(newValue: TextFieldValue) {
+        isResultFresh = false
         _textFieldValue.value = newValue
         _expression.value = newValue.text
         updatePreview()
     }
 
     fun setExpression(expr: String) {
+        isResultFresh = false
         _expression.value = expr
         _textFieldValue.value = TextFieldValue(text = expr, selection = TextRange(expr.length))
         updatePreview()
     }
 
     fun applyResult(result: String) {
+        isResultFresh = false
         _expression.value = result
         _textFieldValue.value = TextFieldValue(text = result, selection = TextRange(result.length))
         updatePreview()
     }
 
     fun applyEquation(equation: String) {
+        isResultFresh = false
         _expression.value = equation
         _textFieldValue.value = TextFieldValue(text = equation, selection = TextRange(equation.length))
         updatePreview()
     }
 
     fun onAppendInput(text: String) {
+        val isOperator = text in listOf("+", "−", "-", "×", "*", "÷", "/", "^", "%")
+        if (isResultFresh) {
+            isResultFresh = false
+            if (!isOperator) {
+                _textFieldValue.value = TextFieldValue(text = "", selection = TextRange.Zero)
+                _expression.value = ""
+            }
+        }
+
         val currentTfv = _textFieldValue.value
         val currentText = currentTfv.text
         val selection = currentTfv.selection
@@ -537,6 +552,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun onDeleteChar() {
+        isResultFresh = false
         val currentTfv = _textFieldValue.value
         val currentText = currentTfv.text
         val selection = currentTfv.selection
@@ -566,6 +582,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun onClearAll() {
+        isResultFresh = false
         _textFieldValue.value = TextFieldValue(text = "", selection = TextRange.Zero)
         _expression.value = ""
         _previewResult.value = "0"
@@ -646,6 +663,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             _expression.value = resultStr
             _textFieldValue.value = TextFieldValue(text = resultStr, selection = TextRange(resultStr.length))
             _previewResult.value = resultStr
+            isResultFresh = true
 
             // Save to Room DB history
             saveHistory("STANDARD", expr, resultStr, details = if (_isDegreeMode.value) "DEG" else "RAD")

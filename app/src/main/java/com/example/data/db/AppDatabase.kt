@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [CalculationEntity::class], version = 2, exportSchema = false)
+@Database(entities = [CalculationEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun calculationDao(): CalculationDao
 
@@ -26,6 +26,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_calculation_history_isTrash_timestamp ON calculation_history (isTrash, timestamp)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_calculation_history_isTrash_category_timestamp ON calculation_history (isTrash, category, timestamp)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_calculation_history_isTrash_isFavorite_timestamp ON calculation_history (isTrash, isFavorite, timestamp)")
+                } catch (ignored: Exception) {}
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -33,7 +43,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "advanced_calculator_database"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance

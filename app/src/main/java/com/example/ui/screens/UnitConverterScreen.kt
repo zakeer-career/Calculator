@@ -93,7 +93,7 @@ fun UnitConverterScreen(
                 .fillMaxWidth()
                 .testTag("unit_input_field"),
             singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
         )
 
         // From Unit -> Swap -> To Unit Selectors
