@@ -137,9 +137,14 @@ jobs:
 
       - name: Build Android Debug APK
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC' -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC -Djava.awt.headless=true' -Djava.awt.headless=true -Dkotlin.compiler.execution.strategy=daemon -Dksp.incremental=false"
         run: |
-          ./gradlew :app:assembleDebug --parallel --build-cache --no-daemon
+          ./gradlew :app:assembleDebug \
+            --build-cache \
+            --stacktrace \
+            -Djava.awt.headless=true \
+            -Dkotlin.compiler.execution.strategy=daemon \
+            -Dksp.incremental=false
 
       - name: Prepare Named APK Artifact
         id: prepare_apk
