@@ -76,7 +76,7 @@ jobs:
 
       - name: Ensure Gradle Wrapper & Permissions
         run: |
-          if [ ! -f gradlew ]; then
+          if [ ! -f gradlew ] || [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
             gradle wrapper --gradle-version 9.3.1
           fi
           chmod +x gradlew
