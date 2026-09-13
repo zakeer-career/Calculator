@@ -23,8 +23,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -283,43 +286,54 @@ fun DisplayPanel(
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    modifier = Modifier.padding(horizontal = 2.dp, vertical = 1.dp)
                                 ) {
                                     if (onDecreaseHeight != null) {
-                                        Text(
-                                            text = "-",
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 14.sp,
-                                            color = MaterialTheme.colorScheme.primary,
+                                        Box(
                                             modifier = Modifier
+                                                .sizeIn(minWidth = 32.dp, minHeight = 32.dp)
+                                                .clip(CircleShape)
                                                 .clickable {
                                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                     onDecreaseHeight()
                                                 }
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                .testTag("display_size_decrease_btn")
-                                        )
+                                                .testTag("display_size_decrease_btn"),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "-",
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 16.sp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                     Text(
                                         text = "${effectiveMinHeightDp}dp",
-                                        fontSize = 10.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 4.dp)
                                     )
                                     if (onIncreaseHeight != null) {
-                                        Text(
-                                            text = "+",
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 14.sp,
-                                            color = MaterialTheme.colorScheme.primary,
+                                        Box(
                                             modifier = Modifier
+                                                .sizeIn(minWidth = 32.dp, minHeight = 32.dp)
+                                                .clip(CircleShape)
                                                 .clickable {
                                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                     onIncreaseHeight()
                                                 }
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                .testTag("display_size_increase_btn")
-                                        )
+                                                .testTag("display_size_increase_btn"),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "+",
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 16.sp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -420,24 +434,11 @@ fun DisplayPanel(
                                 BasicTextField(
                                     value = currentTfv,
                                     onValueChange = { newTfv ->
-                                        softwareKeyboardController?.hide()
                                         onExpressionValueChange?.invoke(newTfv)
                                     },
-                                    readOnly = false,
+                                    readOnly = true,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .onFocusChanged { focusState ->
-                                            if (focusState.isFocused) {
-                                                softwareKeyboardController?.hide()
-                                            }
-                                        }
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                onTap = {
-                                                    softwareKeyboardController?.hide()
-                                                }
-                                            )
-                                        }
                                         .testTag("expression_text"),
                                     textStyle = TextStyle(
                                         fontSize = mainTextSize,
@@ -449,11 +450,8 @@ fun DisplayPanel(
                                     singleLine = true,
                                     cursorBrush = SolidColor(if (activeTheme.hasRetroGlow) Color(0xFF39FF14) else MaterialTheme.colorScheme.primary),
                                     keyboardOptions = KeyboardOptions(
-                                        keyboardType = KeyboardType.Number,
-                                        imeAction = ImeAction.Done
-                                    ),
-                                    keyboardActions = KeyboardActions(
-                                        onDone = { onCalculate?.invoke() }
+                                        keyboardType = KeyboardType.None,
+                                        imeAction = ImeAction.None
                                     )
                                 )
                             }
@@ -468,24 +466,11 @@ fun DisplayPanel(
                                 BasicTextField(
                                     value = currentTfv,
                                     onValueChange = { newTfv ->
-                                        softwareKeyboardController?.hide()
                                         onExpressionValueChange?.invoke(newTfv)
                                     },
-                                    readOnly = false,
+                                    readOnly = true,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .onFocusChanged { focusState ->
-                                            if (focusState.isFocused) {
-                                                softwareKeyboardController?.hide()
-                                            }
-                                        }
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                onTap = {
-                                                    softwareKeyboardController?.hide()
-                                                }
-                                            )
-                                        }
                                         .testTag("expression_text"),
                                     textStyle = TextStyle(
                                         fontSize = mainTextSize,
@@ -497,11 +482,8 @@ fun DisplayPanel(
                                     singleLine = true,
                                     cursorBrush = SolidColor(if (activeTheme.hasRetroGlow) Color(0xFF39FF14) else MaterialTheme.colorScheme.primary),
                                     keyboardOptions = KeyboardOptions(
-                                        keyboardType = KeyboardType.Number,
-                                        imeAction = ImeAction.Done
-                                    ),
-                                    keyboardActions = KeyboardActions(
-                                        onDone = { onCalculate?.invoke() }
+                                        keyboardType = KeyboardType.None,
+                                        imeAction = ImeAction.None
                                     )
                                 )
                             }
@@ -509,24 +491,11 @@ fun DisplayPanel(
                             BasicTextField(
                                 value = currentTfv,
                                 onValueChange = { newTfv ->
-                                    softwareKeyboardController?.hide()
                                     onExpressionValueChange?.invoke(newTfv)
                                 },
-                                readOnly = false,
+                                readOnly = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .onFocusChanged { focusState ->
-                                        if (focusState.isFocused) {
-                                            softwareKeyboardController?.hide()
-                                        }
-                                    }
-                                    .pointerInput(Unit) {
-                                        detectTapGestures(
-                                            onTap = {
-                                                softwareKeyboardController?.hide()
-                                            }
-                                        )
-                                    }
                                     .testTag("expression_text"),
                                 textStyle = TextStyle(
                                     fontSize = mainTextSize,
@@ -538,11 +507,8 @@ fun DisplayPanel(
                                 singleLine = true,
                                 cursorBrush = SolidColor(if (activeTheme.hasRetroGlow) Color(0xFF39FF14) else MaterialTheme.colorScheme.primary),
                                 keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Number,
-                                    imeAction = ImeAction.Done
-                                ),
-                                keyboardActions = KeyboardActions(
-                                    onDone = { onCalculate?.invoke() }
+                                    keyboardType = KeyboardType.None,
+                                    imeAction = ImeAction.None
                                 ),
                                 decorationBox = { innerTextField ->
                                     Box(

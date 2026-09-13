@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -110,6 +112,7 @@ fun LiquidGlassBottomBar(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .padding(
                 horizontal = when (navBarStyle) {
                     "MINIMAL_BUBBLE" -> 24.dp
@@ -211,7 +214,7 @@ fun LiquidGlassBottomBar(
                     // RPhone-style Press scale (~0.85f / ~0.82f) and spring return on release
                     val targetScale = when {
                         isPressed -> if (navBarStyle == "PILL" || navBarStyle == "MINIMAL_BUBBLE") 0.82f else 0.85f
-                        isSelected -> 1.12f
+                        isSelected -> 1.05f
                         else -> 1.0f
                     }
 
@@ -247,7 +250,7 @@ fun LiquidGlassBottomBar(
                             .clip(RoundedCornerShape(20.dp))
                             .clickable(
                                 interactionSource = interactionSource,
-                                indication = null
+                                indication = ripple(bounded = true, radius = 24.dp)
                             ) {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onTabSelected(index)

@@ -2,10 +2,14 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -23,6 +28,7 @@ import androidx.compose.material3.ElevatedFilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +67,7 @@ fun UnitConverterScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .padding(16.dp)
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -99,77 +106,83 @@ fun UnitConverterScreen(
         // From Unit -> Swap -> To Unit Selectors
         val unitsList = UnitConverter.getUnits(selectedCategory)
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // From Unit Selector
+        var expandedFrom by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = expandedFrom,
+            onExpandedChange = { expandedFrom = !expandedFrom },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            var expandedFrom by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
+            OutlinedTextField(
+                value = "${fromUnit.name} (${fromUnit.symbol})",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("From Unit") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedFrom) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                shape = RoundedCornerShape(14.dp)
+            )
+            ExposedDropdownMenu(
                 expanded = expandedFrom,
-                onExpandedChange = { expandedFrom = !expandedFrom },
-                modifier = Modifier.weight(1f)
+                onDismissRequest = { expandedFrom = false }
             ) {
-                OutlinedTextField(
-                    value = "${fromUnit.name} (${fromUnit.symbol})",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("From") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedFrom) },
-                    modifier = Modifier.menuAnchor()
-                )
-                ExposedDropdownMenu(
-                    expanded = expandedFrom,
-                    onDismissRequest = { expandedFrom = false }
-                ) {
-                    unitsList.forEach { unit ->
-                        DropdownMenuItem(
-                            text = { Text("${unit.name} (${unit.symbol})") },
-                            onClick = {
-                                viewModel.selectFromUnit(unit)
-                                expandedFrom = false
-                            }
-                        )
-                    }
+                unitsList.forEach { unit ->
+                    DropdownMenuItem(
+                        text = { Text("${unit.name} (${unit.symbol})") },
+                        onClick = {
+                            viewModel.selectFromUnit(unit)
+                            expandedFrom = false
+                        }
+                    )
                 }
             }
+        }
 
-            IconButton(
+        // Centered Swap Button
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            FilledTonalIconButton(
                 onClick = { viewModel.swapUnits() },
-                modifier = Modifier
-                    .padding(horizontal = 4.dp)
-                    .testTag("unit_swap_btn")
+                modifier = Modifier.testTag("unit_swap_btn")
             ) {
-                Icon(Icons.Default.SwapHoriz, contentDescription = "Swap Units")
+                Icon(Icons.Default.SwapVert, contentDescription = "Swap Units")
             }
+        }
 
-            var expandedTo by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
+        // To Unit Selector
+        var expandedTo by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = expandedTo,
+            onExpandedChange = { expandedTo = !expandedTo },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = "${toUnit.name} (${toUnit.symbol})",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("To Unit") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTo) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                shape = RoundedCornerShape(14.dp)
+            )
+            ExposedDropdownMenu(
                 expanded = expandedTo,
-                onExpandedChange = { expandedTo = !expandedTo },
-                modifier = Modifier.weight(1f)
+                onDismissRequest = { expandedTo = false }
             ) {
-                OutlinedTextField(
-                    value = "${toUnit.name} (${toUnit.symbol})",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("To") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTo) },
-                    modifier = Modifier.menuAnchor()
-                )
-                ExposedDropdownMenu(
-                    expanded = expandedTo,
-                    onDismissRequest = { expandedTo = false }
-                ) {
-                    unitsList.forEach { unit ->
-                        DropdownMenuItem(
-                            text = { Text("${unit.name} (${unit.symbol})") },
-                            onClick = {
-                                viewModel.selectToUnit(unit)
-                                expandedTo = false
-                            }
-                        )
-                    }
+                unitsList.forEach { unit ->
+                    DropdownMenuItem(
+                        text = { Text("${unit.name} (${unit.symbol})") },
+                        onClick = {
+                            viewModel.selectToUnit(unit)
+                            expandedTo = false
+                        }
+                    )
                 }
             }
         }
@@ -219,5 +232,7 @@ fun UnitConverterScreen(
             Icon(Icons.Default.Bookmark, contentDescription = "Save")
             Text("  Save Conversion to History", fontWeight = FontWeight.Bold)
         }
+
+        Spacer(modifier = Modifier.height(88.dp))
     }
 }

@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,18 +23,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +57,7 @@ import com.example.data.currency.defaultCurrencies
 import com.example.ui.viewmodel.CalculatorViewModel
 import com.example.util.MathEvaluator
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurrencyConverterScreen(
     viewModel: CalculatorViewModel,
@@ -69,6 +75,7 @@ fun CurrencyConverterScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .padding(16.dp)
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -254,9 +261,11 @@ fun CurrencyConverterScreen(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(88.dp))
     }
 
-    // Currency Picker Modal Dialog for FROM
+    // Currency Picker Modal Sheet for FROM
     if (showCurrencyDialogForFrom) {
         CurrencyPickerDialog(
             currencies = exchangeState.availableCurrencies,
@@ -268,7 +277,7 @@ fun CurrencyConverterScreen(
         )
     }
 
-    // Currency Picker Modal Dialog for TO
+    // Currency Picker Modal Sheet for TO
     if (showCurrencyDialogForTo) {
         CurrencyPickerDialog(
             currencies = exchangeState.availableCurrencies,
@@ -281,6 +290,7 @@ fun CurrencyConverterScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurrencyPickerDialog(
     currencies: List<CurrencyInfo>,
@@ -291,44 +301,59 @@ fun CurrencyPickerDialog(
     val filtered = currencies.filter {
         it.code.contains(search, ignoreCase = true) || it.name.contains(search, ignoreCase = true)
     }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Select Currency") },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = search,
-                    onValueChange = { search = it },
-                    placeholder = { Text("Search USD, EUR, INR...") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+        sheetState = sheetState,
+        modifier = Modifier.imePadding()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Select Currency",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
 
-                LazyColumn(modifier = Modifier.height(300.dp)) {
-                    items(filtered) { curr ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelect(curr) }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(curr.flag, fontSize = 24.sp)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("${curr.code} - ${curr.name}", fontWeight = FontWeight.Bold)
-                            }
+            OutlinedTextField(
+                value = search,
+                onValueChange = { search = it },
+                placeholder = { Text("Search USD, EUR, INR...") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 380.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(filtered) { curr ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(curr) }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(curr.flag, fontSize = 28.sp)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(curr.code, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(curr.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            Spacer(modifier = Modifier.height(16.dp))
         }
-    )
+    }
 }

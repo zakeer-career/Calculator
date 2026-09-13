@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Straighten
@@ -238,6 +239,7 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
     var showCalcGuideSheet by remember { mutableStateOf(false) }
     var showThemeStudioSheet by remember { mutableStateOf(false) }
     var showTopScreenMenu by remember { mutableStateOf(false) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
 
     // PIN lock input state
     var pinVerificationInput by remember { mutableStateOf("") }
@@ -522,38 +524,50 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    IconButton(
-                        onClick = { showCalcGuideSheet = true },
-                        modifier = Modifier.testTag("top_guide_btn")
-                    ) {
-                        Icon(
-                            Icons.Default.MenuBook,
-                            contentDescription = "Calculation Guide",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            val settingsIdx = currentNavItems.indexOf(NavItem.Settings)
-                            if (settingsIdx >= 0) selectedTab = settingsIdx
-                        },
-                        modifier = Modifier.testTag("top_settings_btn")
-                    ) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(
-                        onClick = { showHelpDialog = true },
-                        modifier = Modifier.testTag("help_dialog_btn")
-                    ) {
-                        Icon(
-                            Icons.Default.HelpOutline,
-                            contentDescription = "Install Help",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    Box {
+                        IconButton(
+                            onClick = { showOverflowMenu = true },
+                            modifier = Modifier.testTag("top_more_options_btn")
+                        ) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "More Options",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showOverflowMenu,
+                            onDismissRequest = { showOverflowMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Calculation Guide") },
+                                leadingIcon = { Icon(Icons.Default.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showCalcGuideSheet = true
+                                },
+                                modifier = Modifier.testTag("top_guide_btn")
+                            )
+                            DropdownMenuItem(
+                                text = { Text("App Settings") },
+                                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    val settingsIdx = currentNavItems.indexOf(NavItem.Settings)
+                                    if (settingsIdx >= 0) selectedTab = settingsIdx
+                                },
+                                modifier = Modifier.testTag("top_settings_btn")
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Help & About") },
+                                leadingIcon = { Icon(Icons.Default.HelpOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showHelpDialog = true
+                                },
+                                modifier = Modifier.testTag("help_dialog_btn")
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
