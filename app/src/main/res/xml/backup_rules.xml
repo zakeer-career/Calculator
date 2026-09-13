@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <exclude domain="sharedpref" path="calc_settings.xml"/>
-    <exclude domain="database" path="app_database"/>
+    <exclude domain="sharedpref" path="currency_cache_prefs.xml"/>
+    <exclude domain="database" path="advanced_calculator_database"/>
+    <exclude domain="database" path="advanced_calculator_database-wal"/>
+    <exclude domain="database" path="advanced_calculator_database-shm"/>
 </full-backup-content>
 

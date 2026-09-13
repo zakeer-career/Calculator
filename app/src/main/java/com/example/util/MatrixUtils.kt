@@ -119,32 +119,41 @@ object MatrixUtils {
         if (n == 1) return mat[0][0]
         if (n == 2) return mat[0][0] * mat[1][1] - mat[0][1] * mat[1][0]
 
-        var det = 0.0
-        val temp = Array(n) { DoubleArray(n) }
-        var sign = 1.0
+        // Numerically stable O(n^3) Gaussian elimination with partial pivoting
+        val a = Array(n) { mat[it].clone() }
+        var det = 1.0
 
-        for (f in 0 until n) {
-            getCofactor(mat, temp, 0, f, n)
-            det += sign * mat[0][f] * calcDeterminant(temp, n - 1)
-            sign = -sign
-        }
-        return det
-    }
+        for (i in 0 until n) {
+            var pivotRow = i
+            for (k in i + 1 until n) {
+                if (abs(a[k][i]) > abs(a[pivotRow][i])) {
+                    pivotRow = k
+                }
+            }
 
-    private fun getCofactor(mat: Array<DoubleArray>, temp: Array<DoubleArray>, p: Int, q: Int, n: Int) {
-        var i = 0
-        var j = 0
-        for (row in 0 until n) {
-            for (col in 0 until n) {
-                if (row != p && col != q) {
-                    temp[i][j++] = mat[row][col]
-                    if (j == n - 1) {
-                        j = 0
-                        i++
-                    }
+            if (abs(a[pivotRow][i]) < 1e-12) {
+                return 0.0
+            }
+
+            if (pivotRow != i) {
+                val temp = a[i]
+                a[i] = a[pivotRow]
+                a[pivotRow] = temp
+                det = -det
+            }
+
+            val pivot = a[i][i]
+            det *= pivot
+
+            for (j in i + 1 until n) {
+                val factor = a[j][i] / pivot
+                for (c in i + 1 until n) {
+                    a[j][c] -= factor * a[i][c]
                 }
             }
         }
+
+        return if (abs(det) < 1e-12) 0.0 else det
     }
 
     fun inverse(a: MatrixData): MatrixResult {

@@ -455,13 +455,13 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
                 else -> dao.getByCategory(cat)
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allRecentHistory: StateFlow<List<CalculationEntity>> = dao.getAllHistory()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val trashList: StateFlow<List<CalculationEntity>> = dao.getTrashHistory()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         // Set up initial matrix values

@@ -29,6 +29,51 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.CalcTheme
 import com.example.ui.theme.CalculatorTheme
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+
+fun getAccessibleCalcLabel(text: String): String {
+    return when (text) {
+        "×", "*" -> "Multiply"
+        "÷", "/" -> "Divide"
+        "−", "-" -> "Minus"
+        "+" -> "Plus"
+        "=" -> "Equals"
+        "%" -> "Percent"
+        "√" -> "Square root"
+        "^" -> "Power of"
+        "!" -> "Factorial"
+        "π" -> "Pi constant"
+        "e" -> "Euler constant"
+        "C" -> "Clear"
+        "AC" -> "All clear"
+        "⌫" -> "Backspace"
+        "±" -> "Plus minus toggle"
+        "DEG" -> "Degree mode"
+        "RAD" -> "Radian mode"
+        "sin" -> "Sine"
+        "cos" -> "Cosine"
+        "tan" -> "Tangent"
+        "asin" -> "Arc sine"
+        "acos" -> "Arc cosine"
+        "atan" -> "Arc tangent"
+        "sinh" -> "Hyperbolic sine"
+        "cosh" -> "Hyperbolic cosine"
+        "tanh" -> "Hyperbolic tangent"
+        "log" -> "Base 10 logarithm"
+        "ln" -> "Natural logarithm"
+        "MC" -> "Memory clear"
+        "MR" -> "Memory recall"
+        "M+" -> "Memory add"
+        "M-" -> "Memory subtract"
+        "MS" -> "Memory store"
+        "(" -> "Open parenthesis"
+        ")" -> "Close parenthesis"
+        "." -> "Decimal point"
+        "," -> "Comma"
+        else -> text
+    }
+}
 
 @Composable
 fun ExpressiveCalcButton(
@@ -59,7 +104,9 @@ fun ExpressiveCalcButton(
 
     Button(
         onClick = onClick,
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .semantics { contentDescription = getAccessibleCalcLabel(text) },
         shape = shapes.medium,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
@@ -204,6 +251,7 @@ fun CalcButton(
             .fillMaxSize()
             .scale(pressScale)
             .then(shadowModifier)
+            .semantics { contentDescription = getAccessibleCalcLabel(text) }
             .testTag(testTag),
         shape = shape,
         colors = ButtonDefaults.buttonColors(

@@ -59,9 +59,9 @@ object UnitConverter {
             )
             UnitCategory.SPEED -> listOf(
                 UnitItem("Meter / second", "m/s", 1.0),
-                UnitItem("Kilometer / hour", "km/h", 0.277777778),
+                UnitItem("Kilometer / hour", "km/h", 1.0 / 3.6),
                 UnitItem("Miles / hour", "mph", 0.44704),
-                UnitItem("Knot", "kt", 0.514444)
+                UnitItem("Knot", "kt", 1852.0 / 3600.0)
             )
             UnitCategory.TIME -> listOf(
                 UnitItem("Second", "s", 1.0),

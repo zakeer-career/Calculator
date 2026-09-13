@@ -104,17 +104,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.activity.viewModels
 import androidx.fragment.app.FragmentActivity
 
 class MainActivity : FragmentActivity() {
-    private var calculatorViewModel: CalculatorViewModel? = null
+    private val calculatorViewModel: CalculatorViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val viewModel: CalculatorViewModel = viewModel()
-            calculatorViewModel = viewModel
+            val viewModel = calculatorViewModel
 
             val isAppLocked by viewModel.isAppLocked.collectAsStateWithLifecycle()
             val incognitoMode by viewModel.incognitoMode.collectAsStateWithLifecycle()

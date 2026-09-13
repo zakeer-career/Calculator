@@ -162,11 +162,38 @@ jobs:
             exit 1
           fi
 
-      - name: Upload APK Build Artifact
+      - name: Package Source Code Archive
+        id: prepare_source
+        run: |
+          SOURCE_ZIP="Calculator-${{ steps.app_info.outputs.RELEASE_TAG }}-source.zip"
+          echo "Packaging source code into ${SOURCE_ZIP}..."
+          if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            # Create clean git archive from HEAD
+            git archive --format=zip --prefix="Calculator-${{ steps.app_info.outputs.VERSION }}/" --output="$SOURCE_ZIP" HEAD
+          else
+            # Fallback zip excluding generated build artifacts
+            zip -r "$SOURCE_ZIP" . -x "*.git*" -x "*build/*" -x "*.gradle/*" -x "*node_modules/*" -x "*.env" -x "*debug.keystore*"
+          fi
+          echo "SOURCE_ZIP=${SOURCE_ZIP}" >> "$GITHUB_OUTPUT"
+          echo "Source archive successfully created at: ${SOURCE_ZIP}"
+
+      - name: Generate Checksums
+        id: generate_checksums
+        run: |
+          CHECKSUM_FILE="SHA256SUMS.txt"
+          sha256sum "${{ steps.prepare_apk.outputs.APK_PATH }}" "${{ steps.prepare_source.outputs.SOURCE_ZIP }}" | sed "s|${APK_DIR}/||" > "$CHECKSUM_FILE"
+          echo "CHECKSUM_FILE=${CHECKSUM_FILE}" >> "$GITHUB_OUTPUT"
+          echo "--- Checksums ---"
+          cat "$CHECKSUM_FILE"
+
+      - name: Upload Build Artifacts (APK & Source)
         uses: actions/upload-artifact@v7
         with:
-          name: Calculator-${{ steps.app_info.outputs.RELEASE_TAG }}
-          path: ${{ steps.prepare_apk.outputs.APK_PATH }}
+          name: Calculator-${{ steps.app_info.outputs.RELEASE_TAG }}-artifacts
+          path: |
+            ${{ steps.prepare_apk.outputs.APK_PATH }}
+            ${{ steps.prepare_source.outputs.SOURCE_ZIP }}
+            ${{ steps.generate_checksums.outputs.CHECKSUM_FILE }}
           retention-days: 30
           compression-level: 0
 
@@ -185,13 +212,13 @@ jobs:
           **Build Number:** #${{ github.run_number }}  
           **Event:** \`${{ github.event_name }}\`  
 
-          ### 📦 What's New:
-          - Automated continuous build and packaging of Calculator APK.
-          - High-precision math engine, scientific calculations, unit converter, and currency rates.
-          - Modern Jetpack Compose UI with adaptive themes.
+          ### 📦 Release Assets
+          - **Android APK:** \`Calculator-${{ steps.app_info.outputs.RELEASE_TAG }}.apk\`
+          - **Source Code Archive:** \`Calculator-${{ steps.app_info.outputs.RELEASE_TAG }}-source.zip\`
+          - **Integrity:** \`SHA256SUMS.txt\`
 
-          ### ⬇️ Download
-          Download the attached APK below to install on your Android device.
+          ### ⬇️ Downloads
+          Download the APK to install directly on your Android device, or download the source code zip archive below.
           EOF
           fi
 
@@ -199,8 +226,12 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v3
         with:
-          files: ${{ steps.prepare_apk.outputs.APK_PATH }}
+          files: |
+            ${{ steps.prepare_apk.outputs.APK_PATH }}
+            ${{ steps.prepare_source.outputs.SOURCE_ZIP }}
+            ${{ steps.generate_checksums.outputs.CHECKSUM_FILE }}
           tag_name: ${{ steps.app_info.outputs.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
           name: "Calculator ${{ steps.app_info.outputs.RELEASE_TAG }}"
           body_path: RELEASE_NOTES.md
           draft: false
