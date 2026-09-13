@@ -1,14 +1,14 @@
-package com.example
+package com.zakeercareer.calculator
 
-import com.example.data.currency.CurrencyRepository
-import com.example.data.currency.defaultRates
-import com.example.util.EvaluationResult
-import com.example.util.MathEvaluator
-import com.example.util.MatrixData
-import com.example.util.MatrixResult
-import com.example.util.MatrixUtils
-import com.example.util.UnitCategory
-import com.example.util.UnitConverter
+import com.zakeercareer.calculator.data.currency.CurrencyRepository
+import com.zakeercareer.calculator.data.currency.defaultRates
+import com.zakeercareer.calculator.util.EvaluationResult
+import com.zakeercareer.calculator.util.MathEvaluator
+import com.zakeercareer.calculator.util.MatrixData
+import com.zakeercareer.calculator.util.MatrixResult
+import com.zakeercareer.calculator.util.MatrixUtils
+import com.zakeercareer.calculator.util.UnitCategory
+import com.zakeercareer.calculator.util.UnitConverter
 import org.junit.Assert.*
 import org.junit.Test
 import java.math.BigDecimal

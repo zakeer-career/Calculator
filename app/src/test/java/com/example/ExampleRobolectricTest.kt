@@ -1,13 +1,13 @@
-package com.example
+package com.zakeercareer.calculator
 
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import com.example.data.currency.CurrencyRepository
-import com.example.data.currency.ExchangeRatesState
-import com.example.data.currency.defaultRates
-import com.example.data.db.AppDatabase
-import com.example.data.db.CalculationEntity
+import com.zakeercareer.calculator.data.currency.CurrencyRepository
+import com.zakeercareer.calculator.data.currency.ExchangeRatesState
+import com.zakeercareer.calculator.data.currency.defaultRates
+import com.zakeercareer.calculator.data.db.AppDatabase
+import com.zakeercareer.calculator.data.db.CalculationEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
