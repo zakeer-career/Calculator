@@ -260,7 +260,7 @@ fun MatrixEditor(
                                         textAlign = TextAlign.Center,
                                         fontWeight = FontWeight.Bold
                                     ),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                                 )
                             }
                         }
@@ -276,8 +276,14 @@ fun ScalarEditor(
     scalarK: Double,
     onScalarChanged: (Double) -> Unit
 ) {
+    var textValue by remember(scalarK) {
+        mutableStateOf(if (scalarK == 0.0) "0" else scalarK.toString().removeSuffix(".0"))
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("scalar_editor_card"),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
@@ -285,17 +291,52 @@ fun ScalarEditor(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Scalar Value (k)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            OutlinedTextField(
-                value = scalarK.toString(),
-                onValueChange = { input ->
-                    val num = input.toDoubleOrNull() ?: 1.0
-                    onScalarChanged(num)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Enter scalar multiplier k") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            Text("Scalar Multiplier (k)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Enter a scalar value to multiply with Matrix A (k × A). Supports integers, negative numbers, and decimals.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            OutlinedTextField(
+                value = textValue,
+                onValueChange = { input ->
+                    textValue = input
+                    val num = input.toDoubleOrNull()
+                    if (num != null) {
+                        onScalarChanged(num)
+                    } else if (input.isBlank()) {
+                        onScalarChanged(0.0)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("scalar_k_input"),
+                label = { Text("Scalar k") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+
+            // Quick preset chips for scalar k
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(-1.0, 0.0, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0).forEach { preset ->
+                    val label = if (preset % 1.0 == 0.0) preset.toLong().toString() else preset.toString()
+                    ElevatedFilterChip(
+                        selected = scalarK == preset,
+                        onClick = {
+                            textValue = label
+                            onScalarChanged(preset)
+                        },
+                        label = { Text(label, fontWeight = FontWeight.Bold) },
+                        modifier = Modifier.testTag("scalar_preset_$label")
+                    )
+                }
+            }
         }
     }
 }

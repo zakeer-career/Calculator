@@ -1,5 +1,7 @@
 package com.example.data.currency
 
+import android.content.Context
+import android.content.SharedPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -20,13 +22,17 @@ data class CurrencyInfo(
 
 data class ExchangeRatesState(
     val base: String = "USD",
-    val rates: Map<String, Double> = defaultRates,
+    val rates: Map<String, BigDecimal> = defaultRatesBigDecimal,
     val availableCurrencies: List<CurrencyInfo> = defaultCurrencies,
     val lastUpdated: String = "Offline Default Rates",
     val isRealtime: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null
 )
+
+val defaultRatesBigDecimal: Map<String, BigDecimal> by lazy {
+    defaultRates.mapValues { BigDecimal.valueOf(it.value) }
+}
 
 val defaultCurrencies = listOf(
     CurrencyInfo("USD", "US Dollar", "🇺🇸"),
@@ -223,7 +229,67 @@ fun getFlagEmojiForCurrency(code: String): String {
 
 object CurrencyRepository {
 
-    suspend fun fetchRealtimeRates(): ExchangeRatesState = withContext(Dispatchers.IO) {
+    private const val PREFS_NAME = "currency_cache_prefs"
+    private const val KEY_RATES_JSON = "cached_rates_json"
+    private const val KEY_BASE = "cached_base"
+    private const val KEY_TIMESTAMP = "cached_timestamp"
+
+    fun saveCache(context: Context, state: ExchangeRatesState) {
+        try {
+            val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val json = JSONObject()
+            for ((code, rate) in state.rates) {
+                json.put(code, rate.toPlainString())
+            }
+            prefs.edit()
+                .putString(KEY_RATES_JSON, json.toString())
+                .putString(KEY_BASE, state.base)
+                .putString(KEY_TIMESTAMP, state.lastUpdated)
+                .apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun loadCache(context: Context): ExchangeRatesState? {
+        return try {
+            val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val jsonStr = prefs.getString(KEY_RATES_JSON, null) ?: return null
+            val base = prefs.getString(KEY_BASE, "USD") ?: "USD"
+            val timestamp = prefs.getString(KEY_TIMESTAMP, "Persisted Offline Cache") ?: "Persisted Offline Cache"
+            val json = JSONObject(jsonStr)
+
+            val ratesMap = mutableMapOf<String, BigDecimal>()
+            val dynamicCurrencies = defaultCurrencies.map {
+                if (it.flag == "🌐") it.copy(flag = getFlagEmojiForCurrency(it.code)) else it
+            }.toMutableList()
+            val existingCodes = dynamicCurrencies.map { it.code }.toSet()
+
+            for (key in json.keys()) {
+                val rateStr = json.getString(key)
+                val rate = BigDecimal(rateStr)
+                ratesMap[key] = rate
+                if (!existingCodes.contains(key)) {
+                    dynamicCurrencies.add(CurrencyInfo(key, "$key Currency", getFlagEmojiForCurrency(key)))
+                }
+            }
+
+            ExchangeRatesState(
+                base = base,
+                rates = ratesMap,
+                availableCurrencies = dynamicCurrencies.sortedBy { it.code },
+                lastUpdated = if (timestamp.startsWith("Cached")) timestamp else "Cached ($timestamp)",
+                isRealtime = true,
+                isLoading = false,
+                error = null
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun fetchRealtimeRates(context: Context? = null): ExchangeRatesState = withContext(Dispatchers.IO) {
         try {
             val url = URL("https://open.er-api.com/v6/latest/USD")
             val connection = url.openConnection() as HttpURLConnection
@@ -236,14 +302,14 @@ object CurrencyRepository {
                 val json = JSONObject(responseText)
                 val ratesObj = json.getJSONObject("rates")
 
-                val ratesMap = mutableMapOf<String, Double>()
+                val ratesMap = mutableMapOf<String, BigDecimal>()
                 val dynamicCurrencies = defaultCurrencies.map {
                     if (it.flag == "🌐") it.copy(flag = getFlagEmojiForCurrency(it.code)) else it
                 }.toMutableList()
                 val existingCodes = dynamicCurrencies.map { it.code }.toSet()
 
                 for (key in ratesObj.keys()) {
-                    val rate = ratesObj.getDouble(key)
+                    val rate = BigDecimal(ratesObj.optString(key, ratesObj.getDouble(key).toString()))
                     ratesMap[key] = rate
                     if (!existingCodes.contains(key)) {
                         dynamicCurrencies.add(CurrencyInfo(key, "$key Currency", getFlagEmojiForCurrency(key)))
@@ -253,7 +319,7 @@ object CurrencyRepository {
                 val df = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
                 val timeStr = df.format(Date())
 
-                ExchangeRatesState(
+                val state = ExchangeRatesState(
                     base = "USD",
                     rates = ratesMap,
                     availableCurrencies = dynamicCurrencies.sortedBy { it.code },
@@ -262,27 +328,43 @@ object CurrencyRepository {
                     isLoading = false,
                     error = null
                 )
+
+                if (context != null) {
+                    saveCache(context, state)
+                }
+
+                state
+            } else {
+                val cached = context?.let { loadCache(it) }
+                if (cached != null) {
+                    cached.copy(error = "HTTP ${connection.responseCode}. Using persisted cache.")
+                } else {
+                    ExchangeRatesState(
+                        base = "USD",
+                        rates = defaultRatesBigDecimal,
+                        availableCurrencies = defaultCurrencies,
+                        lastUpdated = "Offline (Default)",
+                        isRealtime = false,
+                        isLoading = false,
+                        error = "HTTP ${connection.responseCode}. Using fallback rates."
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            val cached = context?.let { loadCache(it) }
+            if (cached != null) {
+                cached.copy(error = "Network offline. Using persisted cache (${cached.lastUpdated}).")
             } else {
                 ExchangeRatesState(
                     base = "USD",
-                    rates = defaultRates,
+                    rates = defaultRatesBigDecimal,
                     availableCurrencies = defaultCurrencies,
-                    lastUpdated = "Offline (Cached)",
+                    lastUpdated = "Offline Fallback",
                     isRealtime = false,
                     isLoading = false,
-                    error = "HTTP ${connection.responseCode}. Using cached rates."
+                    error = "Network offline. Using fallback exchange rates."
                 )
             }
-        } catch (e: Exception) {
-            ExchangeRatesState(
-                base = "USD",
-                rates = defaultRates,
-                availableCurrencies = defaultCurrencies,
-                lastUpdated = "Offline Fallback",
-                isRealtime = false,
-                isLoading = false,
-                error = "Network offline. Using fallback exchange rates."
-            )
         }
     }
 
@@ -294,17 +376,14 @@ object CurrencyRepository {
         amount: BigDecimal,
         fromCode: String,
         toCode: String,
-        rates: Map<String, Double>,
+        rates: Map<String, BigDecimal>,
         scale: Int = 4
     ): BigDecimal {
         if (amount.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO.setScale(scale, RoundingMode.HALF_UP)
-        val fromRateVal = rates[fromCode] ?: defaultRates[fromCode]
+        val fromRate = rates[fromCode] ?: defaultRatesBigDecimal[fromCode]
             ?: throw IllegalArgumentException("Exchange rate unavailable for currency '$fromCode'")
-        val toRateVal = rates[toCode] ?: defaultRates[toCode]
+        val toRate = rates[toCode] ?: defaultRatesBigDecimal[toCode]
             ?: throw IllegalArgumentException("Exchange rate unavailable for currency '$toCode'")
-
-        val fromRate = BigDecimal.valueOf(fromRateVal)
-        val toRate = BigDecimal.valueOf(toRateVal)
 
         // Amount in USD = Amount / fromRate
         val inUsd = amount.divide(fromRate, MathContext.DECIMAL128)
@@ -312,16 +391,53 @@ object CurrencyRepository {
         return converted.setScale(scale, RoundingMode.HALF_UP)
     }
 
+    @JvmName("convertCurrencyBigDecimalWithDoubleRates")
+    fun convertCurrencyBigDecimal(
+        amount: BigDecimal,
+        fromCode: String,
+        toCode: String,
+        rates: Map<String, Double>,
+        scale: Int = 4
+    ): BigDecimal {
+        val bigDecimalRates = rates.mapValues { BigDecimal.valueOf(it.value) }
+        return convertCurrencyBigDecimal(amount, fromCode, toCode, bigDecimalRates, scale)
+    }
+
+    fun convertCurrency(
+        amount: Double,
+        fromCode: String,
+        toCode: String,
+        rates: Map<String, BigDecimal>
+    ): Double {
+        val amountBigDecimal = BigDecimal.valueOf(amount)
+        return convertCurrencyBigDecimal(amountBigDecimal, fromCode, toCode, rates, scale = 6).toDouble()
+    }
+
+    @JvmName("convertCurrencyWithDoubleRates")
     fun convertCurrency(
         amount: Double,
         fromCode: String,
         toCode: String,
         rates: Map<String, Double>
     ): Double {
-        val amountBigDecimal = BigDecimal.valueOf(amount)
-        return convertCurrencyBigDecimal(amountBigDecimal, fromCode, toCode, rates, scale = 6).toDouble()
+        val bigDecimalRates = rates.mapValues { BigDecimal.valueOf(it.value) }
+        return convertCurrency(amount, fromCode, toCode, bigDecimalRates)
     }
 
+    fun convertCurrencyOrNull(
+        amount: Double,
+        fromCode: String,
+        toCode: String,
+        rates: Map<String, BigDecimal>
+    ): Double? {
+        return try {
+            convertCurrency(amount, fromCode, toCode, rates)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @JvmName("convertCurrencyOrNullWithDoubleRates")
     fun convertCurrencyOrNull(
         amount: Double,
         fromCode: String,

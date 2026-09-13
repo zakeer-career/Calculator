@@ -31,6 +31,12 @@ interface CalculationDao {
     @Query("UPDATE calculation_history SET isTrash = 1 WHERE isTrash = 0 AND (expression LIKE '%' || :query || '%' ESCAPE '\\' OR result LIKE '%' || :query || '%' ESCAPE '\\' OR note LIKE '%' || :query || '%' ESCAPE '\\')")
     suspend fun clearBySearch(query: String)
 
+    @Query("UPDATE calculation_history SET isTrash = 1 WHERE isTrash = 0 AND category = :category AND (expression LIKE '%' || :query || '%' ESCAPE '\\' OR result LIKE '%' || :query || '%' ESCAPE '\\' OR note LIKE '%' || :query || '%' ESCAPE '\\')")
+    suspend fun clearBySearchAndCategory(query: String, category: String)
+
+    @Query("UPDATE calculation_history SET isTrash = 1 WHERE isTrash = 0 AND isFavorite = 1 AND (expression LIKE '%' || :query || '%' ESCAPE '\\' OR result LIKE '%' || :query || '%' ESCAPE '\\' OR note LIKE '%' || :query || '%' ESCAPE '\\')")
+    suspend fun clearFavoritesBySearch(query: String)
+
     @Query("DELETE FROM calculation_history")
     suspend fun permanentlyDeleteAll()
 
@@ -54,6 +60,12 @@ interface CalculationDao {
 
     @Query("SELECT * FROM calculation_history WHERE isTrash = 0 AND (expression LIKE '%' || :query || '%' ESCAPE '\\' OR result LIKE '%' || :query || '%' ESCAPE '\\' OR note LIKE '%' || :query || '%' ESCAPE '\\') ORDER BY timestamp DESC")
     fun searchHistory(query: String): Flow<List<CalculationEntity>>
+
+    @Query("SELECT * FROM calculation_history WHERE isTrash = 0 AND category = :category AND (expression LIKE '%' || :query || '%' ESCAPE '\\' OR result LIKE '%' || :query || '%' ESCAPE '\\' OR note LIKE '%' || :query || '%' ESCAPE '\\') ORDER BY timestamp DESC")
+    fun searchHistoryByCategory(query: String, category: String): Flow<List<CalculationEntity>>
+
+    @Query("SELECT * FROM calculation_history WHERE isTrash = 0 AND isFavorite = 1 AND (expression LIKE '%' || :query || '%' ESCAPE '\\' OR result LIKE '%' || :query || '%' ESCAPE '\\' OR note LIKE '%' || :query || '%' ESCAPE '\\') ORDER BY timestamp DESC")
+    fun searchFavorites(query: String): Flow<List<CalculationEntity>>
 
     @Query("SELECT * FROM calculation_history WHERE isTrash = 1 ORDER BY timestamp DESC")
     fun getTrashHistory(): Flow<List<CalculationEntity>>

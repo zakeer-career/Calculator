@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -46,8 +47,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -168,6 +172,9 @@ fun FuturisticCalcCurrencyBar(
         if (decimals == -1) MathEvaluator.formatNumber(baseRateVal) else String.format(java.util.Locale.US, "%.${decimals.coerceAtLeast(2)}f", baseRateVal)
     }
 
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+
     // Glassmorphic futuristic bar container
     Card(
         modifier = modifier
@@ -275,12 +282,23 @@ fun FuturisticCalcCurrencyBar(
                 // ACTIVE CONVERSION PILL
                 Surface(
                     onClick = {
-                        if (toggleEnabledAction == "INSERT_TO_CALC") {
-                            onInsertValueToCalc(formattedConverted)
-                        } else if (toggleEnabledAction == "SWAP_CURRENCIES") {
-                            onSwapCurrencies()
-                        } else {
-                            onInsertValueToCalc(formattedConverted)
+                        when (toggleEnabledAction) {
+                            "AUTO_COPY" -> {
+                                clipboardManager.setText(AnnotatedString(formattedConverted))
+                                Toast.makeText(context, "Copied $formattedConverted ${toCurrency.code} to clipboard", Toast.LENGTH_SHORT).show()
+                            }
+                            "SWAP_CURRENCIES" -> {
+                                onSwapCurrencies()
+                            }
+                            "INSERT_TO_CALC" -> {
+                                onInsertValueToCalc(formattedConverted)
+                            }
+                            "LIVE_CONVERT" -> {
+                                onInsertValueToCalc(formattedConverted)
+                            }
+                            else -> {
+                                onInsertValueToCalc(formattedConverted)
+                            }
                         }
                     },
                     shape = RoundedCornerShape(16.dp),

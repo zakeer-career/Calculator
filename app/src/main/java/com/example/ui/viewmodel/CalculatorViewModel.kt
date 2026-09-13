@@ -41,7 +41,33 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     private val _incognitoMode = MutableStateFlow(prefs.getBoolean("incognito_mode", false))
     val incognitoMode: StateFlow<Boolean> = _incognitoMode.asStateFlow()
 
-    private fun getOrCreatePinSalt(): String {
+    companion object {
+        private const val PBKDF2_ITERATIONS = 100_000
+        private const val PBKDF2_KEY_LENGTH = 256
+        private const val SALT_BYTE_LENGTH = 32
+    }
+
+    private fun getOrCreateSecurePinSalt(): String {
+        var saltHex = prefs.getString("app_pin_salt_pbkdf2", null)
+        if (saltHex == null) {
+            val random = java.security.SecureRandom()
+            val saltBytes = ByteArray(SALT_BYTE_LENGTH)
+            random.nextBytes(saltBytes)
+            saltHex = saltBytes.joinToString("") { "%02x".format(it) }
+            prefs.edit().putString("app_pin_salt_pbkdf2", saltHex).apply()
+        }
+        return saltHex
+    }
+
+    private fun hashPinPbkdf2(pin: String, saltHex: String): String {
+        val saltBytes = saltHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        val spec = javax.crypto.spec.PBEKeySpec(pin.toCharArray(), saltBytes, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH)
+        val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+        val hashBytes = factory.generateSecret(spec).encoded
+        return hashBytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun getOrCreateLegacyPinSalt(): String {
         var salt = prefs.getString("app_pin_salt", null)
         if (salt == null) {
             salt = java.util.UUID.randomUUID().toString()
@@ -50,18 +76,26 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         return salt
     }
 
-    private fun hashPin(pin: String, salt: String): String {
+    private fun hashPinLegacySha256(pin: String, salt: String): String {
         val md = java.security.MessageDigest.getInstance("SHA-256")
         val bytes = md.digest((salt + pin).toByteArray(Charsets.UTF_8))
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
     private fun initPinSecurity(): Boolean {
+        if (prefs.getString("app_pin_hash_pbkdf2", null)?.isNotEmpty() == true) {
+            return true
+        }
         val legacyPin = prefs.getString("app_pin", null)
         if (!legacyPin.isNullOrEmpty()) {
-            val salt = getOrCreatePinSalt()
-            val hash = hashPin(legacyPin, salt)
-            prefs.edit().putString("app_pin_hash", hash).remove("app_pin").apply()
+            val salt = getOrCreateSecurePinSalt()
+            val hash = hashPinPbkdf2(legacyPin, salt)
+            prefs.edit()
+                .putString("app_pin_hash_pbkdf2", hash)
+                .remove("app_pin")
+                .remove("app_pin_hash")
+                .remove("app_pin_salt")
+                .apply()
             return true
         }
         return prefs.getString("app_pin_hash", null)?.isNotEmpty() == true
@@ -80,8 +114,8 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     private val _isAppLocked = MutableStateFlow(_hasAppPin.value || _biometricLockEnabled.value)
     val isAppLocked: StateFlow<Boolean> = _isAppLocked.asStateFlow()
 
-    private var failedPinAttempts = 0
-    private var lockoutUntilMs = 0L
+    private var failedPinAttempts = prefs.getInt("app_pin_failed_attempts", 0)
+    private var lockoutUntilMs = prefs.getLong("app_pin_lockout_until_ms", 0L)
 
     // --- DISPLAY & PREFERENCES SETTINGS ---
     private val _decimalPrecision = MutableStateFlow(prefs.getInt("decimal_precision", -1))
@@ -315,9 +349,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     private fun getSavedEnabledTabs(): Set<String> {
         val saved = prefs.getStringSet("enabled_tabs", null)
         if (saved.isNullOrEmpty()) return defaultTabList.toSet()
-        val set = saved.toMutableSet()
-        set.add("SCIENTIFIC")
-        return set
+        return saved.toSet()
     }
 
     // --- STANDARD / SCIENTIFIC CALCULATOR STATE ---
@@ -411,7 +443,11 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         query to cat
     }.flatMapLatest { (query, cat) ->
         if (query.isNotBlank()) {
-            dao.searchHistory(query)
+            when (cat) {
+                "ALL" -> dao.searchHistory(query)
+                "FAVORITES" -> dao.searchFavorites(query)
+                else -> dao.searchHistoryByCategory(query, cat)
+            }
         } else {
             when (cat) {
                 "ALL" -> dao.getAllHistory()
@@ -430,6 +466,12 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     init {
         // Set up initial matrix values
         initSampleMatrix()
+
+        // Load persistent currency cache if available
+        val cached = CurrencyRepository.loadCache(application)
+        if (cached != null) {
+            _exchangeState.value = cached
+        }
 
         // Fetch currency rates
         refreshCurrencyRates()
@@ -761,7 +803,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     fun refreshCurrencyRates() {
         viewModelScope.launch {
             _exchangeState.value = _exchangeState.value.copy(isLoading = true)
-            val updatedState = CurrencyRepository.fetchRealtimeRates()
+            val updatedState = CurrencyRepository.fetchRealtimeRates(application)
             _exchangeState.value = updatedState
             calculateCurrencyConversion()
         }
@@ -815,14 +857,22 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     fun unlockAppDirectly() {
         failedPinAttempts = 0
         lockoutUntilMs = 0L
+        prefs.edit().remove("app_pin_failed_attempts").remove("app_pin_lockout_until_ms").apply()
         _isAppLocked.value = false
     }
 
     fun setAppPin(pin: String) {
         if (pin.length != 4 || !pin.all { it.isDigit() }) return
-        val salt = getOrCreatePinSalt()
-        val hash = hashPin(pin, salt)
-        prefs.edit().putString("app_pin_hash", hash).remove("app_pin").apply()
+        val salt = getOrCreateSecurePinSalt()
+        val hash = hashPinPbkdf2(pin, salt)
+        prefs.edit()
+            .putString("app_pin_hash_pbkdf2", hash)
+            .remove("app_pin")
+            .remove("app_pin_hash")
+            .remove("app_pin_salt")
+            .remove("app_pin_failed_attempts")
+            .remove("app_pin_lockout_until_ms")
+            .apply()
         _hasAppPin.value = true
         _appPin.value = "SET"
         _isAppLocked.value = false
@@ -831,7 +881,15 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun removeAppPin() {
-        prefs.edit().remove("app_pin").remove("app_pin_hash").remove("app_pin_salt").apply()
+        prefs.edit()
+            .remove("app_pin")
+            .remove("app_pin_hash")
+            .remove("app_pin_salt")
+            .remove("app_pin_hash_pbkdf2")
+            .remove("app_pin_salt_pbkdf2")
+            .remove("app_pin_failed_attempts")
+            .remove("app_pin_lockout_until_ms")
+            .apply()
         _hasAppPin.value = false
         _appPin.value = ""
         _isAppLocked.value = false
@@ -844,28 +902,53 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         if (now < lockoutUntilMs) {
             return false
         }
-        val storedHash = prefs.getString("app_pin_hash", null)
-        if (storedHash == null) {
+        val pbkdf2Hash = prefs.getString("app_pin_hash_pbkdf2", null)
+        val legacySha256Hash = prefs.getString("app_pin_hash", null)
+
+        if (pbkdf2Hash == null && legacySha256Hash == null) {
             _isAppLocked.value = false
             return true
         }
-        val salt = getOrCreatePinSalt()
-        val computedHash = hashPin(pin, salt)
 
-        val isMatch = java.security.MessageDigest.isEqual(
-            computedHash.toByteArray(Charsets.UTF_8),
-            storedHash.toByteArray(Charsets.UTF_8)
-        )
+        var isMatch = false
+        if (pbkdf2Hash != null) {
+            val salt = getOrCreateSecurePinSalt()
+            val computedHash = hashPinPbkdf2(pin, salt)
+            isMatch = java.security.MessageDigest.isEqual(
+                computedHash.toByteArray(Charsets.UTF_8),
+                pbkdf2Hash.toByteArray(Charsets.UTF_8)
+            )
+        } else if (legacySha256Hash != null) {
+            val salt = getOrCreateLegacyPinSalt()
+            val computedHash = hashPinLegacySha256(pin, salt)
+            isMatch = java.security.MessageDigest.isEqual(
+                computedHash.toByteArray(Charsets.UTF_8),
+                legacySha256Hash.toByteArray(Charsets.UTF_8)
+            )
+            // Upgrade legacy hash seamlessly to PBKDF2
+            if (isMatch) {
+                val newSalt = getOrCreateSecurePinSalt()
+                val newHash = hashPinPbkdf2(pin, newSalt)
+                prefs.edit()
+                    .putString("app_pin_hash_pbkdf2", newHash)
+                    .remove("app_pin_hash")
+                    .remove("app_pin_salt")
+                    .apply()
+            }
+        }
 
         if (isMatch) {
             failedPinAttempts = 0
             lockoutUntilMs = 0L
+            prefs.edit().remove("app_pin_failed_attempts").remove("app_pin_lockout_until_ms").apply()
             _isAppLocked.value = false
             return true
         } else {
             failedPinAttempts++
+            prefs.edit().putInt("app_pin_failed_attempts", failedPinAttempts).apply()
             if (failedPinAttempts >= 5) {
                 lockoutUntilMs = System.currentTimeMillis() + 30_000L
+                prefs.edit().putLong("app_pin_lockout_until_ms", lockoutUntilMs).apply()
             }
             return false
         }
@@ -1154,13 +1237,13 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
 
     fun toggleFavorite(entry: CalculationEntity) {
         viewModelScope.launch {
-            dao.update(entry.copy(isFavorite = !entry.isFavorite))
+            dao.updateFavorite(entry.id, !entry.isFavorite)
         }
     }
 
     fun updateEntryNote(entry: CalculationEntity, note: String) {
         viewModelScope.launch {
-            dao.update(entry.copy(note = if (note.isBlank()) null else note))
+            dao.updateNote(entry.id, if (note.isBlank()) null else note)
         }
     }
 
@@ -1169,7 +1252,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             return false
         }
         viewModelScope.launch {
-            dao.update(entry.copy(isTrash = true))
+            dao.setTrashStatus(entry.id, true)
         }
         return true
     }
@@ -1182,7 +1265,11 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             val query = searchQuery.value
             val cat = filterCategory.value
             if (query.isNotBlank()) {
-                dao.clearBySearch(query)
+                when (cat) {
+                    "ALL" -> dao.clearBySearch(query)
+                    "FAVORITES" -> dao.clearFavoritesBySearch(query)
+                    else -> dao.clearBySearchAndCategory(query, cat)
+                }
             } else if (cat == "FAVORITES") {
                 dao.clearFavorites()
             } else if (cat == "ALL") {
@@ -1207,7 +1294,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
 
     fun restoreFromTrash(entry: CalculationEntity) {
         viewModelScope.launch {
-            dao.update(entry.copy(isTrash = false))
+            dao.setTrashStatus(entry.id, false)
         }
     }
 
@@ -1433,44 +1520,202 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     fun importSettingsFromJson(jsonStr: String): Boolean {
         return try {
             val json = org.json.JSONObject(jsonStr)
-            if (json.has("theme_preset")) setThemePreset(json.getString("theme_preset"))
-            if (json.has("decimal_precision")) setDecimalPrecision(json.getInt("decimal_precision"))
-            if (json.has("compact_view")) setCompactView(json.getBoolean("compact_view"))
-            if (json.has("btn_shape")) setBtnShape(json.getString("btn_shape"))
-            if (json.has("display_font_size")) setDisplayFontSize(json.getString("display_font_size"))
-            if (json.has("display_align")) setDisplayAlign(json.getString("display_align"))
-            if (json.has("number_anim_type")) setNumberAnimationType(json.getString("number_anim_type"))
-            if (json.has("display_height_dp")) setDisplayHeightDp(json.getInt("display_height_dp"))
-            if (json.has("display_width_padding_dp")) setDisplayWidthPaddingDp(json.getInt("display_width_padding_dp"))
-            if (json.has("display_corner_radius_dp")) setDisplayCornerRadiusDp(json.getInt("display_corner_radius_dp"))
-            if (json.has("display_main_font_size_sp")) setDisplayMainFontSizeSp(json.getInt("display_main_font_size_sp"))
-            if (json.has("display_preview_font_size_sp")) setDisplayPreviewFontSizeSp(json.getInt("display_preview_font_size_sp"))
-            if (json.has("keypad_height_scale")) setKeypadHeightScale(json.getDouble("keypad_height_scale").toFloat())
-            if (json.has("keypad_width_padding_dp")) setKeypadWidthPaddingDp(json.getInt("keypad_width_padding_dp"))
-            if (json.has("keypad_grid_spacing_dp")) setKeypadGridSpacingDp(json.getInt("keypad_grid_spacing_dp"))
-            if (json.has("keypad_btn_corner_radius_dp")) setKeypadBtnCornerRadiusDp(json.getInt("keypad_btn_corner_radius_dp"))
-            if (json.has("keypad_btn_font_size_sp")) setKeypadBtnFontSizeSp(json.getInt("keypad_btn_font_size_sp"))
-            if (json.has("lock_keypad_height")) setLockKeypadHeight(json.getBoolean("lock_keypad_height"))
-            if (json.has("show_live_preview")) setShowLivePreview(json.getBoolean("show_live_preview"))
-            if (json.has("live_preview_anim_enabled")) setLivePreviewAnimEnabled(json.getBoolean("live_preview_anim_enabled"))
-            if (json.has("live_preview_anim_style")) setLivePreviewAnimStyle(json.getString("live_preview_anim_style"))
-            if (json.has("history_gridlines_enabled")) setHistoryGridlinesEnabled(json.getBoolean("history_gridlines_enabled"))
-            if (json.has("history_swipe_left_action")) setHistorySwipeLeftAction(json.getString("history_swipe_left_action"))
-            if (json.has("history_swipe_right_action")) setHistorySwipeRightAction(json.getString("history_swipe_right_action"))
-            if (json.has("history_deletion_locked")) setHistoryDeletionLocked(json.getBoolean("history_deletion_locked"))
-            if (json.has("calc_history_gridline_style")) setCalcHistoryGridlineStyle(json.getString("calc_history_gridline_style"))
-            if (json.has("calc_history_item_spacing_dp")) setCalcHistoryItemSpacingDp(json.getInt("calc_history_item_spacing_dp"))
-            if (json.has("calc_history_max_items_count")) setCalcHistoryMaxItemsCount(json.getInt("calc_history_max_items_count"))
-            if (json.has("calc_history_is_adaptive")) setCalcHistoryIsAdaptive(json.getBoolean("calc_history_is_adaptive"))
-            if (json.has("adaptive_display_resizing")) setAdaptiveDisplayResizing(json.getBoolean("adaptive_display_resizing"))
-            if (json.has("adaptive_theme_enabled")) setAdaptiveThemeEnabled(json.getBoolean("adaptive_theme_enabled"))
-            if (json.has("theme_contrast_mode")) setThemeContrastMode(json.getString("theme_contrast_mode"))
-            if (json.has("top_history_banner")) setTopHistoryBannerVisible(json.getBoolean("top_history_banner"))
-            if (json.has("haptic_feedback")) setHapticFeedbackEnabled(json.getBoolean("haptic_feedback"))
-            if (json.has("show_bottom_bar")) setShowBottomBar(json.getBoolean("show_bottom_bar"))
-            if (json.has("nav_bar_style")) setNavBarStyle(json.getString("nav_bar_style"))
-            if (json.has("nav_bar_blur_opacity")) setNavBarBlurOpacity(json.getDouble("nav_bar_blur_opacity").toFloat())
-            true
+            val editor = prefs.edit()
+            val pendingFlowUpdates = mutableListOf<() -> Unit>()
+
+            if (json.has("theme_preset")) {
+                val v = json.getString("theme_preset")
+                editor.putString("theme_preset", v)
+                pendingFlowUpdates.add { _themePreset.value = v }
+            }
+            if (json.has("decimal_precision")) {
+                val v = json.getInt("decimal_precision")
+                editor.putInt("decimal_precision", v)
+                pendingFlowUpdates.add { _decimalPrecision.value = v }
+            }
+            if (json.has("compact_view")) {
+                val v = json.getBoolean("compact_view")
+                editor.putBoolean("compact_view", v)
+                pendingFlowUpdates.add { _compactView.value = v }
+            }
+            if (json.has("btn_shape")) {
+                val v = json.getString("btn_shape")
+                editor.putString("btn_shape", v)
+                pendingFlowUpdates.add { _btnShape.value = v }
+            }
+            if (json.has("display_font_size")) {
+                val v = json.getString("display_font_size")
+                editor.putString("display_font_size", v)
+                pendingFlowUpdates.add { _displayFontSize.value = v }
+            }
+            if (json.has("display_align")) {
+                val v = json.getString("display_align")
+                editor.putString("display_align", v)
+                pendingFlowUpdates.add { _displayAlign.value = v }
+            }
+            if (json.has("number_anim_type")) {
+                val v = json.getString("number_anim_type")
+                editor.putString("number_anim_type", v)
+                pendingFlowUpdates.add { _numberAnimationType.value = v }
+            }
+            if (json.has("display_height_dp")) {
+                val v = json.getInt("display_height_dp")
+                editor.putInt("display_height_dp", v)
+                pendingFlowUpdates.add { _displayHeightDp.value = v }
+            }
+            if (json.has("display_width_padding_dp")) {
+                val v = json.getInt("display_width_padding_dp")
+                editor.putInt("display_width_padding_dp", v)
+                pendingFlowUpdates.add { _displayWidthPaddingDp.value = v }
+            }
+            if (json.has("display_corner_radius_dp")) {
+                val v = json.getInt("display_corner_radius_dp")
+                editor.putInt("display_corner_radius_dp", v)
+                pendingFlowUpdates.add { _displayCornerRadiusDp.value = v }
+            }
+            if (json.has("display_main_font_size_sp")) {
+                val v = json.getInt("display_main_font_size_sp")
+                editor.putInt("display_main_font_size_sp", v)
+                pendingFlowUpdates.add { _displayMainFontSizeSp.value = v }
+            }
+            if (json.has("display_preview_font_size_sp")) {
+                val v = json.getInt("display_preview_font_size_sp")
+                editor.putInt("display_preview_font_size_sp", v)
+                pendingFlowUpdates.add { _displayPreviewFontSizeSp.value = v }
+            }
+            if (json.has("keypad_height_scale")) {
+                val v = json.getDouble("keypad_height_scale").toFloat()
+                editor.putFloat("keypad_height_scale", v)
+                pendingFlowUpdates.add { _keypadHeightScale.value = v }
+            }
+            if (json.has("keypad_width_padding_dp")) {
+                val v = json.getInt("keypad_width_padding_dp")
+                editor.putInt("keypad_width_padding_dp", v)
+                pendingFlowUpdates.add { _keypadWidthPaddingDp.value = v }
+            }
+            if (json.has("keypad_grid_spacing_dp")) {
+                val v = json.getInt("keypad_grid_spacing_dp")
+                editor.putInt("keypad_grid_spacing_dp", v)
+                pendingFlowUpdates.add { _keypadGridSpacingDp.value = v }
+            }
+            if (json.has("keypad_btn_corner_radius_dp")) {
+                val v = json.getInt("keypad_btn_corner_radius_dp")
+                editor.putInt("keypad_btn_corner_radius_dp", v)
+                pendingFlowUpdates.add { _keypadBtnCornerRadiusDp.value = v }
+            }
+            if (json.has("keypad_btn_font_size_sp")) {
+                val v = json.getInt("keypad_btn_font_size_sp")
+                editor.putInt("keypad_btn_font_size_sp", v)
+                pendingFlowUpdates.add { _keypadBtnFontSizeSp.value = v }
+            }
+            if (json.has("lock_keypad_height")) {
+                val v = json.getBoolean("lock_keypad_height")
+                editor.putBoolean("lock_keypad_height", v)
+                pendingFlowUpdates.add { _lockKeypadHeight.value = v }
+            }
+            if (json.has("show_live_preview")) {
+                val v = json.getBoolean("show_live_preview")
+                editor.putBoolean("show_live_preview", v)
+                pendingFlowUpdates.add { _showLivePreview.value = v }
+            }
+            if (json.has("live_preview_anim_enabled")) {
+                val v = json.getBoolean("live_preview_anim_enabled")
+                editor.putBoolean("live_preview_anim_enabled", v)
+                pendingFlowUpdates.add { _livePreviewAnimEnabled.value = v }
+            }
+            if (json.has("live_preview_anim_style")) {
+                val v = json.getString("live_preview_anim_style")
+                editor.putString("live_preview_anim_style", v)
+                pendingFlowUpdates.add { _livePreviewAnimStyle.value = v }
+            }
+            if (json.has("history_gridlines_enabled")) {
+                val v = json.getBoolean("history_gridlines_enabled")
+                editor.putBoolean("history_gridlines_enabled", v)
+                pendingFlowUpdates.add { _historyGridlinesEnabled.value = v }
+            }
+            if (json.has("history_swipe_left_action")) {
+                val v = json.getString("history_swipe_left_action")
+                editor.putString("history_swipe_left_action", v)
+                pendingFlowUpdates.add { _historySwipeLeftAction.value = v }
+            }
+            if (json.has("history_swipe_right_action")) {
+                val v = json.getString("history_swipe_right_action")
+                editor.putString("history_swipe_right_action", v)
+                pendingFlowUpdates.add { _historySwipeRightAction.value = v }
+            }
+            if (json.has("history_deletion_locked")) {
+                val v = json.getBoolean("history_deletion_locked")
+                editor.putBoolean("history_deletion_locked", v)
+                pendingFlowUpdates.add { _historyDeletionLocked.value = v }
+            }
+            if (json.has("calc_history_gridline_style")) {
+                val v = json.getString("calc_history_gridline_style")
+                editor.putString("calc_history_gridline_style", v)
+                pendingFlowUpdates.add { _calcHistoryGridlineStyle.value = v }
+            }
+            if (json.has("calc_history_item_spacing_dp")) {
+                val v = json.getInt("calc_history_item_spacing_dp")
+                editor.putInt("calc_history_item_spacing_dp", v)
+                pendingFlowUpdates.add { _calcHistoryItemSpacingDp.value = v }
+            }
+            if (json.has("calc_history_max_items_count")) {
+                val v = json.getInt("calc_history_max_items_count")
+                editor.putInt("calc_history_max_items_count", v)
+                pendingFlowUpdates.add { _calcHistoryMaxItemsCount.value = v }
+            }
+            if (json.has("calc_history_is_adaptive")) {
+                val v = json.getBoolean("calc_history_is_adaptive")
+                editor.putBoolean("calc_history_is_adaptive", v)
+                pendingFlowUpdates.add { _calcHistoryIsAdaptive.value = v }
+            }
+            if (json.has("adaptive_display_resizing")) {
+                val v = json.getBoolean("adaptive_display_resizing")
+                editor.putBoolean("adaptive_display_resizing", v)
+                pendingFlowUpdates.add { _adaptiveDisplayResizing.value = v }
+            }
+            if (json.has("adaptive_theme_enabled")) {
+                val v = json.getBoolean("adaptive_theme_enabled")
+                editor.putBoolean("adaptive_theme_enabled", v)
+                pendingFlowUpdates.add { _adaptiveThemeEnabled.value = v }
+            }
+            if (json.has("theme_contrast_mode")) {
+                val v = json.getString("theme_contrast_mode")
+                editor.putString("theme_contrast_mode", v)
+                pendingFlowUpdates.add { _themeContrastMode.value = v }
+            }
+            if (json.has("top_history_banner")) {
+                val v = json.getBoolean("top_history_banner")
+                editor.putBoolean("top_history_banner", v)
+                pendingFlowUpdates.add { _topHistoryBannerVisible.value = v }
+            }
+            if (json.has("haptic_feedback")) {
+                val v = json.getBoolean("haptic_feedback")
+                editor.putBoolean("haptic_feedback", v)
+                pendingFlowUpdates.add { _hapticFeedbackEnabled.value = v }
+            }
+            if (json.has("show_bottom_bar")) {
+                val v = json.getBoolean("show_bottom_bar")
+                editor.putBoolean("show_bottom_bar", v)
+                pendingFlowUpdates.add { _showBottomBar.value = v }
+            }
+            if (json.has("nav_bar_style")) {
+                val v = json.getString("nav_bar_style")
+                editor.putString("nav_bar_style", v)
+                pendingFlowUpdates.add { _navBarStyle.value = v }
+            }
+            if (json.has("nav_bar_blur_opacity")) {
+                val v = json.getDouble("nav_bar_blur_opacity").toFloat()
+                editor.putFloat("nav_bar_blur_opacity", v)
+                pendingFlowUpdates.add { _navBarBlurOpacity.value = v }
+            }
+
+            val committed = editor.commit()
+            if (committed) {
+                pendingFlowUpdates.forEach { it() }
+                true
+            } else {
+                false
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             false

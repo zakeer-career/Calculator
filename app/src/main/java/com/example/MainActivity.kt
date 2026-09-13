@@ -97,6 +97,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.OutlinedButton
@@ -141,7 +142,31 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    fun triggerBiometricAuthentication(onSuccess: () -> Unit) {
+    fun canAuthenticateBiometrics(): Pair<Boolean, String?> {
+        val biometricManager = BiometricManager.from(this)
+        return when (biometricManager.canAuthenticate(
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+            BiometricManager.Authenticators.BIOMETRIC_WEAK
+        )) {
+            BiometricManager.BIOMETRIC_SUCCESS -> true to null
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> false to "No biometric sensor available on this device"
+            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> false to "Biometric sensor is currently unavailable"
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> false to "No biometric credentials enrolled. Please use your PIN."
+            BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> false to "Security update required for biometric authentication"
+            else -> false to "Biometric authentication is not supported"
+        }
+    }
+
+    fun triggerBiometricAuthentication(onSuccess: () -> Unit, onFallbackToPin: (() -> Unit)? = null) {
+        val (canAuth, errorReason) = canAuthenticateBiometrics()
+        if (!canAuth) {
+            if (errorReason != null) {
+                Toast.makeText(this, errorReason, Toast.LENGTH_SHORT).show()
+            }
+            onFallbackToPin?.invoke()
+            return
+        }
+
         val executor = ContextCompat.getMainExecutor(this)
         val biometricPrompt = BiometricPrompt(
             this,
@@ -154,7 +179,16 @@ class MainActivity : FragmentActivity() {
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
-                    Toast.makeText(this@MainActivity, "Biometric error: $errString", Toast.LENGTH_SHORT).show()
+                    // If user cancels or clicks negative button to use PIN, fall back cleanly without toast
+                    if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                        errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                        errorCode == BiometricPrompt.ERROR_CANCELED
+                    ) {
+                        onFallbackToPin?.invoke()
+                    } else {
+                        Toast.makeText(this@MainActivity, "$errString", Toast.LENGTH_SHORT).show()
+                        onFallbackToPin?.invoke()
+                    }
                 }
 
                 override fun onAuthenticationFailed() {
@@ -222,8 +256,11 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
 
     LaunchedEffect(isAppLocked, biometricLockEnabled) {
         if (isAppLocked && biometricLockEnabled && activity != null) {
-            activity.triggerBiometricAuthentication {
-                viewModel.unlockAppDirectly()
+            val (canAuth, _) = activity.canAuthenticateBiometrics()
+            if (canAuth) {
+                activity.triggerBiometricAuthentication(
+                    onSuccess = { viewModel.unlockAppDirectly() }
+                )
             }
         }
     }
@@ -365,12 +402,12 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                     Text("Unlock App", fontWeight = FontWeight.Bold)
                 }
 
-                if (activity != null) {
+                if (activity != null && activity.canAuthenticateBiometrics().first) {
                     OutlinedButton(
                         onClick = {
-                            activity.triggerBiometricAuthentication {
-                                viewModel.unlockAppDirectly()
-                            }
+                            activity.triggerBiometricAuthentication(
+                                onSuccess = { viewModel.unlockAppDirectly() }
+                            )
                         },
                         modifier = Modifier.fillMaxWidth(0.8f)
                     ) {
