@@ -41,14 +41,47 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     private val _incognitoMode = MutableStateFlow(prefs.getBoolean("incognito_mode", false))
     val incognitoMode: StateFlow<Boolean> = _incognitoMode.asStateFlow()
 
-    private val _appPin = MutableStateFlow(prefs.getString("app_pin", "") ?: "")
+    private fun getOrCreatePinSalt(): String {
+        var salt = prefs.getString("app_pin_salt", null)
+        if (salt == null) {
+            salt = java.util.UUID.randomUUID().toString()
+            prefs.edit().putString("app_pin_salt", salt).apply()
+        }
+        return salt
+    }
+
+    private fun hashPin(pin: String, salt: String): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val bytes = md.digest((salt + pin).toByteArray(Charsets.UTF_8))
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun initPinSecurity(): Boolean {
+        val legacyPin = prefs.getString("app_pin", null)
+        if (!legacyPin.isNullOrEmpty()) {
+            val salt = getOrCreatePinSalt()
+            val hash = hashPin(legacyPin, salt)
+            prefs.edit().putString("app_pin_hash", hash).remove("app_pin").apply()
+            return true
+        }
+        return prefs.getString("app_pin_hash", null)?.isNotEmpty() == true
+    }
+
+    private val _hasAppPin = MutableStateFlow(initPinSecurity())
+    val hasAppPin: StateFlow<Boolean> = _hasAppPin.asStateFlow()
+
+    // Backward-compatible representation of appPin: non-empty if configured
+    private val _appPin = MutableStateFlow(if (_hasAppPin.value) "SET" else "")
     val appPin: StateFlow<String> = _appPin.asStateFlow()
 
     private val _biometricLockEnabled = MutableStateFlow(prefs.getBoolean("biometric_lock_enabled", false))
     val biometricLockEnabled: StateFlow<Boolean> = _biometricLockEnabled.asStateFlow()
 
-    private val _isAppLocked = MutableStateFlow(_appPin.value.isNotEmpty() || _biometricLockEnabled.value)
+    private val _isAppLocked = MutableStateFlow(_hasAppPin.value || _biometricLockEnabled.value)
     val isAppLocked: StateFlow<Boolean> = _isAppLocked.asStateFlow()
+
+    private var failedPinAttempts = 0
+    private var lockoutUntilMs = 0L
 
     // --- DISPLAY & PREFERENCES SETTINGS ---
     private val _decimalPrecision = MutableStateFlow(prefs.getInt("decimal_precision", -1))
@@ -565,7 +598,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     fun onCalculate() {
         val expr = _expression.value
         if (expr.isBlank()) return
-        val res = MathEvaluator.evaluatePartial(expr, _isDegreeMode.value, _decimalPrecision.value, _numberFormatStyle.value)
+        val res = MathEvaluator.evaluateStrict(expr, _isDegreeMode.value, _decimalPrecision.value, _numberFormatStyle.value)
         if (res is EvaluationResult.Success) {
             val resultStr = res.formattedResult
             _expression.value = resultStr
@@ -780,31 +813,71 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun unlockAppDirectly() {
+        failedPinAttempts = 0
+        lockoutUntilMs = 0L
         _isAppLocked.value = false
     }
 
     fun setAppPin(pin: String) {
-        _appPin.value = pin
-        prefs.edit().putString("app_pin", pin).apply()
+        if (pin.length != 4 || !pin.all { it.isDigit() }) return
+        val salt = getOrCreatePinSalt()
+        val hash = hashPin(pin, salt)
+        prefs.edit().putString("app_pin_hash", hash).remove("app_pin").apply()
+        _hasAppPin.value = true
+        _appPin.value = "SET"
         _isAppLocked.value = false
+        failedPinAttempts = 0
+        lockoutUntilMs = 0L
     }
 
     fun removeAppPin() {
+        prefs.edit().remove("app_pin").remove("app_pin_hash").remove("app_pin_salt").apply()
+        _hasAppPin.value = false
         _appPin.value = ""
-        prefs.edit().remove("app_pin").apply()
         _isAppLocked.value = false
+        failedPinAttempts = 0
+        lockoutUntilMs = 0L
     }
 
     fun unlockApp(pin: String): Boolean {
-        if (pin == _appPin.value) {
+        val now = System.currentTimeMillis()
+        if (now < lockoutUntilMs) {
+            return false
+        }
+        val storedHash = prefs.getString("app_pin_hash", null)
+        if (storedHash == null) {
             _isAppLocked.value = false
             return true
         }
-        return false
+        val salt = getOrCreatePinSalt()
+        val computedHash = hashPin(pin, salt)
+
+        val isMatch = java.security.MessageDigest.isEqual(
+            computedHash.toByteArray(Charsets.UTF_8),
+            storedHash.toByteArray(Charsets.UTF_8)
+        )
+
+        if (isMatch) {
+            failedPinAttempts = 0
+            lockoutUntilMs = 0L
+            _isAppLocked.value = false
+            return true
+        } else {
+            failedPinAttempts++
+            if (failedPinAttempts >= 5) {
+                lockoutUntilMs = System.currentTimeMillis() + 30_000L
+            }
+            return false
+        }
+    }
+
+    fun getPinLockoutRemainingSeconds(): Long {
+        val remaining = (lockoutUntilMs - System.currentTimeMillis()) / 1000L
+        return if (remaining > 0) remaining else 0L
     }
 
     fun lockApp() {
-        if (_appPin.value.isNotEmpty()) {
+        if (_hasAppPin.value || _biometricLockEnabled.value) {
             _isAppLocked.value = true
         }
     }
@@ -1106,14 +1179,25 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             return false
         }
         viewModelScope.launch {
+            val query = searchQuery.value
             val cat = filterCategory.value
-            if (cat == "ALL" || cat == "FAVORITES") {
+            if (query.isNotBlank()) {
+                dao.clearBySearch(query)
+            } else if (cat == "FAVORITES") {
+                dao.clearFavorites()
+            } else if (cat == "ALL") {
                 dao.clearAll()
             } else {
                 dao.clearByCategory(cat)
             }
         }
         return true
+    }
+
+    fun clearAllDatabaseHistory() {
+        viewModelScope.launch {
+            dao.permanentlyDeleteAll()
+        }
     }
 
     fun setHistoryDeletionLocked(locked: Boolean) {

@@ -25,6 +25,24 @@ interface CalculationDao {
     @Query("UPDATE calculation_history SET isTrash = 1 WHERE isTrash = 0 AND category = :category")
     suspend fun clearByCategory(category: String)
 
+    @Query("UPDATE calculation_history SET isTrash = 1 WHERE isTrash = 0 AND isFavorite = 1")
+    suspend fun clearFavorites()
+
+    @Query("UPDATE calculation_history SET isTrash = 1 WHERE isTrash = 0 AND (expression LIKE '%' || :query || '%' ESCAPE '\\' OR result LIKE '%' || :query || '%' ESCAPE '\\' OR note LIKE '%' || :query || '%' ESCAPE '\\')")
+    suspend fun clearBySearch(query: String)
+
+    @Query("DELETE FROM calculation_history")
+    suspend fun permanentlyDeleteAll()
+
+    @Query("UPDATE calculation_history SET isFavorite = :isFav WHERE id = :id")
+    suspend fun updateFavorite(id: Long, isFav: Boolean)
+
+    @Query("UPDATE calculation_history SET note = :note WHERE id = :id")
+    suspend fun updateNote(id: Long, note: String?)
+
+    @Query("UPDATE calculation_history SET isTrash = :isTrash WHERE id = :id")
+    suspend fun setTrashStatus(id: Long, isTrash: Boolean)
+
     @Query("SELECT * FROM calculation_history WHERE isTrash = 0 ORDER BY timestamp DESC")
     fun getAllHistory(): Flow<List<CalculationEntity>>
 
@@ -34,7 +52,7 @@ interface CalculationDao {
     @Query("SELECT * FROM calculation_history WHERE isTrash = 0 AND isFavorite = 1 ORDER BY timestamp DESC")
     fun getFavorites(): Flow<List<CalculationEntity>>
 
-    @Query("SELECT * FROM calculation_history WHERE isTrash = 0 AND (expression LIKE '%' || :query || '%' OR result LIKE '%' || :query || '%' OR note LIKE '%' || :query || '%') ORDER BY timestamp DESC")
+    @Query("SELECT * FROM calculation_history WHERE isTrash = 0 AND (expression LIKE '%' || :query || '%' ESCAPE '\\' OR result LIKE '%' || :query || '%' ESCAPE '\\' OR note LIKE '%' || :query || '%' ESCAPE '\\') ORDER BY timestamp DESC")
     fun searchHistory(query: String): Flow<List<CalculationEntity>>
 
     @Query("SELECT * FROM calculation_history WHERE isTrash = 1 ORDER BY timestamp DESC")
@@ -46,3 +64,4 @@ interface CalculationDao {
     @Query("DELETE FROM calculation_history WHERE id = :id")
     suspend fun permanentlyDelete(id: Long)
 }
+

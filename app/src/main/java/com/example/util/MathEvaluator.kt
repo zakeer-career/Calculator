@@ -5,10 +5,31 @@ import kotlin.math.*
 
 object MathEvaluator {
 
-    fun evaluate(expression: String, isDegreeMode: Boolean = true, precision: Int = -1, formatStyle: String = "STANDARD"): EvaluationResult {
-        if (expression.isBlank()) return EvaluationResult.Success(0.0, "0")
+    /**
+     * Strict evaluation for authoritative calculation (e.g. when pressing "=").
+     * Rejects trailing operators, unclosed parentheses, incomplete functions, unknown characters, etc.
+     */
+    fun evaluateStrict(
+        expression: String,
+        isDegreeMode: Boolean = true,
+        precision: Int = -1,
+        formatStyle: String = "STANDARD"
+    ): EvaluationResult {
+        val trimmed = expression.trim()
+        if (trimmed.isBlank()) {
+            return EvaluationResult.Error("Empty Expression")
+        }
+
+        // Check for trailing binary operators
+        val rawClean = trimmed.replace("×", "*").replace("÷", "/").replace("−", "-").trim()
+        if (rawClean.endsWith("+") || rawClean.endsWith("-") || rawClean.endsWith("*") ||
+            rawClean.endsWith("/") || rawClean.endsWith("^") || rawClean.endsWith("(")
+        ) {
+            return EvaluationResult.Error("Incomplete expression")
+        }
+
         try {
-            val sanitized = sanitizeExpression(expression, formatStyle)
+            val sanitized = sanitizeExpression(trimmed, formatStyle, strict = true)
             val tokens = tokenize(sanitized)
             val rpn = shuntingYard(tokens)
             val resultValue = evalRPN(rpn, isDegreeMode)
@@ -28,19 +49,35 @@ object MathEvaluator {
     }
 
     /**
-     * Evaluates full expression or the longest valid expression prefix before trailing operators
-     * (e.g., "9×9×" evaluates the prefix "9×9" -> 81).
+     * Standard evaluate function; defaults to strict evaluation to prevent silent truncation.
      */
-    fun evaluatePartial(expression: String, isDegreeMode: Boolean = true, precision: Int = -1, formatStyle: String = "STANDARD"): EvaluationResult {
+    fun evaluate(
+        expression: String,
+        isDegreeMode: Boolean = true,
+        precision: Int = -1,
+        formatStyle: String = "STANDARD"
+    ): EvaluationResult {
+        return evaluateStrict(expression, isDegreeMode, precision, formatStyle)
+    }
+
+    /**
+     * Evaluates live expression preview. Tolerates incomplete expressions (trailing operators, unclosed parentheses).
+     */
+    fun evaluatePartial(
+        expression: String,
+        isDegreeMode: Boolean = true,
+        precision: Int = -1,
+        formatStyle: String = "STANDARD"
+    ): EvaluationResult {
         if (expression.isBlank()) return EvaluationResult.Success(0.0, "0")
 
-        // 1. First attempt full evaluation
-        val fullResult = evaluate(expression, isDegreeMode, precision, formatStyle)
-        if (fullResult is EvaluationResult.Success) {
-            return fullResult
+        // 1. First attempt strict evaluation
+        val strictRes = evaluateStrict(expression, isDegreeMode, precision, formatStyle)
+        if (strictRes is EvaluationResult.Success) {
+            return strictRes
         }
 
-        // 2. Iteratively trim trailing operators/invalid tokens
+        // 2. Iteratively trim trailing operators/invalid tokens for preview
         var expr = expression.trim()
         val visited = mutableSetOf<String>()
 
@@ -49,7 +86,7 @@ object MathEvaluator {
             if (trimmed.isEmpty()) break
             expr = trimmed
 
-            val res = evaluate(expr, isDegreeMode, precision, formatStyle)
+            val res = evaluateStrict(expr, isDegreeMode, precision, formatStyle)
             if (res is EvaluationResult.Success) {
                 return res
             }
@@ -59,22 +96,21 @@ object MathEvaluator {
             val closeCount = expr.count { it == ')' }
             if (openCount > closeCount) {
                 val autoClosed = expr + ")".repeat(openCount - closeCount)
-                val closedRes = evaluate(autoClosed, isDegreeMode, precision, formatStyle)
+                val closedRes = evaluateStrict(autoClosed, isDegreeMode, precision, formatStyle)
                 if (closedRes is EvaluationResult.Success) {
                     return closedRes
                 }
             }
         }
 
-        return fullResult
+        return strictRes
     }
 
-    private fun sanitizeExpression(expr: String, formatStyle: String = "STANDARD"): String {
+    private fun sanitizeExpression(expr: String, formatStyle: String = "STANDARD", strict: Boolean = false): String {
         var s = expr.replace("×", "*")
             .replace("÷", "/")
             .replace("−", "-")
             .replace("π", "pi")
-            .replace("E", "e")
             .replace(" ", "")
             .replace("\u00A0", "")
             .trim()
@@ -92,9 +128,11 @@ object MathEvaluator {
         s = preprocessPercentages(s)
 
         // Insert implicit multiplication: e.g. 2pi -> 2*pi, 3( -> 3*(, )4 -> )*4, pi( -> pi*(, 5sin -> 5*sin, )( -> )*(
+        // Note: Do NOT match 'e' if it is part of scientific notation like 1e3
         val implicitRegexes = listOf(
-            Regex("(\\d|\\)|pi|e)(pi|e|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
-            Regex("(\\)|pi|e)(\\d)") to "$1*$2",
+            Regex("(\\d|\\)|pi)(pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
+            Regex("(?<=[0-9])e(?![0-9+\\-])") to "*e",
+            Regex("(\\)|pi)(\\d)") to "$1*$2",
             Regex("(\\))(\\()") to "$1*$2"
         )
 
@@ -102,10 +140,13 @@ object MathEvaluator {
             s = regex.replace(s, replacement)
         }
 
-        // Auto-close missing trailing parentheses
         val openCount = s.count { it == '(' }
         val closeCount = s.count { it == ')' }
-        if (openCount > closeCount) {
+        if (strict && openCount != closeCount) {
+            throw IllegalArgumentException("Mismatched parentheses ($openCount open, $closeCount closed)")
+        }
+
+        if (!strict && openCount > closeCount) {
             s += ")".repeat(openCount - closeCount)
         }
 
@@ -145,7 +186,9 @@ object MathEvaluator {
     private fun tokenize(expr: String): List<String> {
         val tokens = mutableListOf<String>()
         var i = 0
-        while (i < expr.length) {
+        val len = expr.length
+
+        while (i < len) {
             val c = expr[i]
             when {
                 c.isWhitespace() -> i++
@@ -153,7 +196,8 @@ object MathEvaluator {
                     // Check for unary minus vs binary minus
                     if (c == '-') {
                         val prevToken = tokens.lastOrNull()
-                        val isUnary = prevToken == null || prevToken in "+-*/^(,sin,cos,tan,asin,acos,atan,log,ln,sqrt,abs"
+                        val isUnary = prevToken == null || prevToken in "+-*/^(," ||
+                            prevToken in setOf("sin", "cos", "tan", "asin", "acos", "atan", "log", "ln", "sqrt", "abs", "neg")
                         if (isUnary) {
                             tokens.add("neg")
                             i++
@@ -163,24 +207,45 @@ object MathEvaluator {
                     tokens.add(c.toString())
                     i++
                 }
-                c.isDigit() || c == '.' -> {
+                c.isDigit() || (c == '.' && i + 1 < len && expr[i + 1].isDigit()) -> {
                     val sb = StringBuilder()
-                    while (i < expr.length && (expr[i].isDigit() || expr[i] == '.')) {
+                    while (i < len && (expr[i].isDigit() || expr[i] == '.')) {
                         sb.append(expr[i])
                         i++
+                    }
+                    // Check for scientific notation exponent: e.g. 1e3, 1E-5, 2.5e+4
+                    if (i < len && (expr[i] == 'e' || expr[i] == 'E')) {
+                        val nextIdx = i + 1
+                        if (nextIdx < len) {
+                            val nextChar = expr[nextIdx]
+                            if (nextChar.isDigit() || ((nextChar == '+' || nextChar == '-') && nextIdx + 1 < len && expr[nextIdx + 1].isDigit())) {
+                                sb.append(expr[i]) // append 'e' / 'E'
+                                i++
+                                if (expr[i] == '+' || expr[i] == '-') {
+                                    sb.append(expr[i])
+                                    i++
+                                }
+                                while (i < len && expr[i].isDigit()) {
+                                    sb.append(expr[i])
+                                    i++
+                                }
+                            }
+                        }
                     }
                     tokens.add(sb.toString())
                 }
                 c.isLetter() -> {
                     val sb = StringBuilder()
-                    while (i < expr.length && expr[i].isLetter()) {
+                    while (i < len && expr[i].isLetter()) {
                         sb.append(expr[i])
                         i++
                     }
                     val word = sb.toString().lowercase()
                     tokens.add(word)
                 }
-                else -> i++
+                else -> {
+                    throw IllegalArgumentException("Unexpected character '$c' at position $i")
+                }
             }
         }
         return tokens
@@ -190,8 +255,8 @@ object MathEvaluator {
         return when (op) {
             "+", "-" -> 1
             "*", "/", "%" -> 2
-            "^" -> 3
-            "neg" -> 4
+            "neg" -> 3   // Unary minus binds less tightly than power (-2^2 = -(2^2) = -4)
+            "^" -> 4     // Power has higher precedence than unary minus
             "!" -> 5
             "sin", "cos", "tan", "asin", "acos", "atan", "sinh", "cosh", "tanh", "asinh", "acosh", "atanh", "log", "ln", "sqrt", "abs" -> 6
             else -> 0
@@ -217,6 +282,9 @@ object MathEvaluator {
                     while (operatorStack.isNotEmpty()) {
                         val top = operatorStack.last()
                         if (top == "(") break
+                        // Prefix unary operator "neg" should not pop a preceding operator from the stack
+                        if (token == "neg") break
+
                         val p1 = precedence(token)
                         val p2 = precedence(top)
                         if (p2 > p1 || (p2 == p1 && !isRightAssociative(token))) {
@@ -243,6 +311,7 @@ object MathEvaluator {
                         output.add(operatorStack.removeAt(operatorStack.lastIndex))
                     }
                 }
+                else -> throw IllegalArgumentException("Unknown identifier or token: $token")
             }
         }
 
@@ -269,17 +338,17 @@ object MathEvaluator {
                 "pi" -> stack.add(PI)
                 "e" -> stack.add(E)
                 "neg" -> {
-                    if (stack.isEmpty()) throw IllegalArgumentException("Syntax Error")
+                    if (stack.isEmpty()) throw IllegalArgumentException("Syntax Error: missing operand for unary minus")
                     val a = stack.removeAt(stack.lastIndex)
                     stack.add(-a)
                 }
                 "!" -> {
-                    if (stack.isEmpty()) throw IllegalArgumentException("Syntax Error")
+                    if (stack.isEmpty()) throw IllegalArgumentException("Syntax Error: missing operand for factorial")
                     val a = stack.removeAt(stack.lastIndex)
                     stack.add(factorial(a))
                 }
                 "+", "-", "*", "/", "%", "^" -> {
-                    if (stack.size < 2) throw IllegalArgumentException("Syntax Error")
+                    if (stack.size < 2) throw IllegalArgumentException("Syntax Error: missing operand for operator $token")
                     val b = stack.removeAt(stack.lastIndex)
                     val a = stack.removeAt(stack.lastIndex)
                     val res = when (token) {
@@ -294,13 +363,29 @@ object MathEvaluator {
                     stack.add(res)
                 }
                 "sin", "cos", "tan", "asin", "acos", "atan", "sinh", "cosh", "tanh", "asinh", "acosh", "atanh", "log", "ln", "sqrt", "abs" -> {
-                    if (stack.isEmpty()) throw IllegalArgumentException("Syntax Error")
+                    if (stack.isEmpty()) throw IllegalArgumentException("Syntax Error: missing argument for function $token")
                     val a = stack.removeAt(stack.lastIndex)
                     val radVal = if (isDegreeMode) Math.toRadians(a) else a
                     val res = when (token) {
                         "sin" -> sin(radVal)
                         "cos" -> cos(radVal)
-                        "tan" -> tan(radVal)
+                        "tan" -> {
+                            if (isDegreeMode) {
+                                val norm = abs(a) % 180.0
+                                if (abs(norm - 90.0) < 1e-9) {
+                                    Double.NaN // Undefined at 90 deg + k * 180 deg
+                                } else {
+                                    tan(radVal)
+                                }
+                            } else {
+                                val norm = abs(a - PI / 2) % PI
+                                if (norm < 1e-12 || abs(norm - PI) < 1e-12) {
+                                    Double.NaN
+                                } else {
+                                    tan(radVal)
+                                }
+                            }
+                        }
                         "asin" -> {
                             val v = asin(a)
                             if (isDegreeMode) Math.toDegrees(v) else v
@@ -319,9 +404,9 @@ object MathEvaluator {
                         "asinh" -> asinh(a)
                         "acosh" -> acosh(a)
                         "atanh" -> atanh(a)
-                        "log" -> log10(a)
-                        "ln" -> ln(a)
-                        "sqrt" -> sqrt(a)
+                        "log" -> if (a <= 0.0) Double.NaN else log10(a)
+                        "ln" -> if (a <= 0.0) Double.NaN else ln(a)
+                        "sqrt" -> if (a < 0.0) Double.NaN else sqrt(a)
                         "abs" -> abs(a)
                         else -> 0.0
                     }
@@ -414,25 +499,38 @@ object MathEvaluator {
         if (formatStyle.equals("PLAIN", ignoreCase = true)) return expr
 
         val cleanExpr = expr.replace("*", "×").replace("/", "÷").replace("-", "−")
-        val numRegex = Regex("\\d+(\\.\\d+)?")
+        val numRegex = Regex("\\d+(\\.\\d+)?([eE][+-]?\\d+)?")
         return numRegex.replace(cleanExpr) { match ->
             val numStr = match.value
-            val parts = numStr.split(".")
-            val intPart = parts[0]
-            val decPart = if (parts.size > 1) parts[1] else null
-
-            val formattedInt = when (formatStyle.uppercase(Locale.US)) {
-                "EUROPEAN" -> formatThousands(intPart, ".")
-                "INDIAN" -> formatIndianGrouping(intPart, ",")
-                else -> formatThousands(intPart, ",")
-            }
-
-            if (decPart != null) {
-                val decSep = if (formatStyle.equals("EUROPEAN", ignoreCase = true)) "," else "."
-                "$formattedInt$decSep$decPart"
+            // If it contains scientific notation, leave exponent alone and format mantissa
+            if (numStr.contains("e", ignoreCase = true)) {
+                val parts = numStr.split(Regex("[eE]"))
+                val mantissa = parts[0]
+                val exp = if (parts.size > 1) parts[1] else ""
+                val formattedMantissa = formatNumberParts(mantissa, formatStyle)
+                "$formattedMantissa" + "e" + exp
             } else {
-                formattedInt
+                formatNumberParts(numStr, formatStyle)
             }
+        }
+    }
+
+    private fun formatNumberParts(numStr: String, formatStyle: String): String {
+        val parts = numStr.split(".")
+        val intPart = parts[0]
+        val decPart = if (parts.size > 1) parts[1] else null
+
+        val formattedInt = when (formatStyle.uppercase(Locale.US)) {
+            "EUROPEAN" -> formatThousands(intPart, ".")
+            "INDIAN" -> formatIndianGrouping(intPart, ",")
+            else -> formatThousands(intPart, ",")
+        }
+
+        return if (decPart != null) {
+            val decSep = if (formatStyle.equals("EUROPEAN", ignoreCase = true)) "," else "."
+            "$formattedInt$decSep$decPart"
+        } else {
+            formattedInt
         }
     }
 
@@ -470,3 +568,4 @@ sealed class EvaluationResult {
     data class Success(val rawValue: Double, val formattedResult: String) : EvaluationResult()
     data class Error(val message: String) : EvaluationResult()
 }
+

@@ -1418,8 +1418,9 @@ fun SettingsScreen(viewModel: CalculatorViewModel) {
             confirmButton = {
                 ElevatedButton(
                     onClick = {
-                        viewModel.clearHistory()
+                        viewModel.clearAllDatabaseHistory()
                         showClearConfirm = false
+                        Toast.makeText(context, "All calculation history permanently deleted", Toast.LENGTH_SHORT).show()
                     }
                 ) {
                     Text("Delete Everything", color = MaterialTheme.colorScheme.error)

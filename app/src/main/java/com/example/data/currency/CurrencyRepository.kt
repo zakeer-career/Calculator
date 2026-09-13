@@ -170,7 +170,36 @@ val defaultRates = mapOf(
     "TWD" to 32.4,
     "MOP" to 8.05,
     "GEL" to 2.80,
-    "AMD" to 388.0
+    "AMD" to 388.0,
+    "IQD" to 1310.0,
+    "JOD" to 0.709,
+    "LBP" to 89500.0,
+    "MMK" to 2100.0,
+    "KHR" to 4080.0,
+    "LAK" to 21800.0,
+    "MNT" to 3450.0,
+    "UZS" to 12650.0,
+    "KZT" to 445.0,
+    "ETB" to 57.5,
+    "TND" to 3.12,
+    "GHS" to 14.8,
+    "UGX" to 3750.0,
+    "TZS" to 2600.0,
+    "RWF" to 1310.0,
+    "XAF" to 605.0,
+    "XOF" to 605.0,
+    "UYU" to 38.8,
+    "DOP" to 59.2,
+    "CRC" to 525.0,
+    "GTQ" to 7.78,
+    "PAB" to 1.0,
+    "BOB" to 6.91,
+    "PYG" to 7520.0,
+    "ISK" to 138.5,
+    "RSD" to 108.0,
+    "BAM" to 1.80,
+    "FJD" to 2.26,
+    "PGK" to 3.88
 )
 
 fun getFlagEmojiForCurrency(code: String): String {
@@ -269,8 +298,10 @@ object CurrencyRepository {
         scale: Int = 4
     ): BigDecimal {
         if (amount.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO.setScale(scale, RoundingMode.HALF_UP)
-        val fromRateVal = rates[fromCode] ?: defaultRates[fromCode] ?: 1.0
-        val toRateVal = rates[toCode] ?: defaultRates[toCode] ?: 1.0
+        val fromRateVal = rates[fromCode] ?: defaultRates[fromCode]
+            ?: throw IllegalArgumentException("Exchange rate unavailable for currency '$fromCode'")
+        val toRateVal = rates[toCode] ?: defaultRates[toCode]
+            ?: throw IllegalArgumentException("Exchange rate unavailable for currency '$toCode'")
 
         val fromRate = BigDecimal.valueOf(fromRateVal)
         val toRate = BigDecimal.valueOf(toRateVal)
@@ -289,5 +320,18 @@ object CurrencyRepository {
     ): Double {
         val amountBigDecimal = BigDecimal.valueOf(amount)
         return convertCurrencyBigDecimal(amountBigDecimal, fromCode, toCode, rates, scale = 6).toDouble()
+    }
+
+    fun convertCurrencyOrNull(
+        amount: Double,
+        fromCode: String,
+        toCode: String,
+        rates: Map<String, Double>
+    ): Double? {
+        return try {
+            convertCurrency(amount, fromCode, toCode, rates)
+        } catch (e: Exception) {
+            null
+        }
     }
 }

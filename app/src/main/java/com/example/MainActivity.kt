@@ -342,9 +342,19 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                 }
                 ElevatedButton(
                     onClick = {
+                        val remainingSec = viewModel.getPinLockoutRemainingSeconds()
+                        if (remainingSec > 0) {
+                            pinErrorText = "Too many failed attempts. Try again in $remainingSec seconds."
+                            return@ElevatedButton
+                        }
                         val success = viewModel.unlockApp(pinVerificationInput)
                         if (!success) {
-                            pinErrorText = "Incorrect PIN. Try again."
+                            val newRemainingSec = viewModel.getPinLockoutRemainingSeconds()
+                            if (newRemainingSec > 0) {
+                                pinErrorText = "Too many attempts. Locked for $newRemainingSec seconds."
+                            } else {
+                                pinErrorText = "Incorrect PIN. Try again."
+                            }
                         } else {
                             pinErrorText = null
                             pinVerificationInput = ""

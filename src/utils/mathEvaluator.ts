@@ -8,18 +8,34 @@ export interface EvaluationResult {
 }
 
 export class MathEvaluator {
-  static evaluate(
+  /**
+   * Authoritative calculation for "="
+   */
+  static evaluateStrict(
     expression: string,
     isDegreeMode: boolean = true,
     precision: number = -1,
     formatStyle: NumberFormatStyle = 'STANDARD'
   ): EvaluationResult {
-    if (!expression || expression.trim() === '') {
-      return { success: true, value: 0, formatted: '0' };
+    const trimmed = (expression || '').trim();
+    if (trimmed === '') {
+      return { success: false, value: 0, formatted: '', error: 'Empty expression' };
+    }
+
+    const rawClean = trimmed.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').trim();
+    if (
+      rawClean.endsWith('+') ||
+      rawClean.endsWith('-') ||
+      rawClean.endsWith('*') ||
+      rawClean.endsWith('/') ||
+      rawClean.endsWith('^') ||
+      rawClean.endsWith('(')
+    ) {
+      return { success: false, value: 0, formatted: '', error: 'Incomplete expression' };
     }
 
     try {
-      const sanitized = this.sanitizeExpression(expression, formatStyle);
+      const sanitized = this.sanitizeExpression(trimmed, formatStyle, true);
       const tokens = this.tokenize(sanitized);
       const rpn = this.shuntingYard(tokens);
       const value = this.evalRPN(rpn, isDegreeMode);
@@ -38,6 +54,15 @@ export class MathEvaluator {
     }
   }
 
+  static evaluate(
+    expression: string,
+    isDegreeMode: boolean = true,
+    precision: number = -1,
+    formatStyle: NumberFormatStyle = 'STANDARD'
+  ): EvaluationResult {
+    return this.evaluateStrict(expression, isDegreeMode, precision, formatStyle);
+  }
+
   static evaluatePartial(
     expression: string,
     isDegreeMode: boolean = true,
@@ -48,8 +73,8 @@ export class MathEvaluator {
       return { success: true, value: 0, formatted: '0' };
     }
 
-    const fullResult = this.evaluate(expression, isDegreeMode, precision, formatStyle);
-    if (fullResult.success) return fullResult;
+    const strictResult = this.evaluateStrict(expression, isDegreeMode, precision, formatStyle);
+    if (strictResult.success) return strictResult;
 
     let expr = expression.trim();
     const visited = new Set<string>();
@@ -59,7 +84,7 @@ export class MathEvaluator {
       expr = expr.slice(0, -1).trim();
       if (!expr) break;
 
-      const res = this.evaluate(expr, isDegreeMode, precision, formatStyle);
+      const res = this.evaluateStrict(expr, isDegreeMode, precision, formatStyle);
       if (res.success) return res;
 
       // Try auto-closing parentheses
@@ -67,21 +92,20 @@ export class MathEvaluator {
       const closeCount = (expr.match(/\)/g) || []).length;
       if (openCount > closeCount) {
         const autoClosed = expr + ')'.repeat(openCount - closeCount);
-        const closedRes = this.evaluate(autoClosed, isDegreeMode, precision, formatStyle);
+        const closedRes = this.evaluateStrict(autoClosed, isDegreeMode, precision, formatStyle);
         if (closedRes.success) return closedRes;
       }
     }
 
-    return fullResult;
+    return strictResult;
   }
 
-  private static sanitizeExpression(expr: string, formatStyle: NumberFormatStyle): string {
+  private static sanitizeExpression(expr: string, formatStyle: NumberFormatStyle, strict: boolean = false): string {
     let s = expr
       .replace(/×/g, '*')
       .replace(/÷/g, '/')
       .replace(/−/g, '-')
       .replace(/π/g, 'pi')
-      .replace(/E/g, 'e')
       .replace(/\s+/g, '')
       .replace(/\u00A0/g, '');
 
@@ -93,9 +117,16 @@ export class MathEvaluator {
     }
 
     // Insert implicit multiplication: e.g. 2pi -> 2*pi, 3( -> 3*(, )4 -> )*4
-    s = s.replace(/(\d|\)|pi|e)(pi|e|\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|log|ln|sqrt|abs)/g, '$1*$2');
-    s = s.replace(/(\)|pi|e)(\d)/g, '$1*$2');
+    s = s.replace(/(\d|\)|pi)(pi|\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|log|ln|sqrt|abs)/g, '$1*$2');
+    s = s.replace(/(?<=[0-9])e(?![0-9+\-])/g, '*e');
+    s = s.replace(/(\)|pi)(\d)/g, '$1*$2');
     s = s.replace(/(\))(\()/g, '$1*$2');
+
+    const openCount = (s.match(/\(/g) || []).length;
+    const closeCount = (s.match(/\)/g) || []).length;
+    if (strict && openCount !== closeCount) {
+      throw new Error(`Mismatched parentheses (${openCount} open, ${closeCount} closed)`);
+    }
 
     return s;
   }
@@ -113,12 +144,30 @@ export class MathEvaluator {
         continue;
       }
 
-      // Numbers
+      // Numbers with scientific notation support: e.g. 1e3, 2.5e-4
       if (/\d/.test(ch) || (ch === '.' && i + 1 < len && /\d/.test(expr[i + 1]))) {
         let numStr = '';
         while (i < len && (/\d/.test(expr[i]) || expr[i] === '.')) {
           numStr += expr[i];
           i++;
+        }
+        if (i < len && (expr[i] === 'e' || expr[i] === 'E')) {
+          const nextIdx = i + 1;
+          if (nextIdx < len) {
+            const nextChar = expr[nextIdx];
+            if (/\d/.test(nextChar) || ((nextChar === '+' || nextChar === '-') && nextIdx + 1 < len && /\d/.test(expr[nextIdx + 1]))) {
+              numStr += expr[i];
+              i++;
+              if (expr[i] === '+' || expr[i] === '-') {
+                numStr += expr[i];
+                i++;
+              }
+              while (i < len && /\d/.test(expr[i])) {
+                numStr += expr[i];
+                i++;
+              }
+            }
+          }
         }
         tokens.push(numStr);
         continue;
@@ -131,22 +180,27 @@ export class MathEvaluator {
           ident += expr[i];
           i++;
         }
-        tokens.push(ident);
+        tokens.push(ident.toLowerCase());
         continue;
       }
 
       // Negative sign vs subtraction
       if (ch === '-') {
         const prev = tokens[tokens.length - 1];
-        if (!prev || prev === '(' || ['+', '-', '*', '/', '^', '%'].includes(prev)) {
+        if (!prev || prev === '(' || ['+', '-', '*', '/', '^', '%'].includes(prev) || this.isFunction(prev) || prev === 'u-') {
           tokens.push('u-');
           i++;
           continue;
         }
       }
 
-      tokens.push(ch);
-      i++;
+      if (['+', '-', '*', '/', '^', '%', '(', ')', '!'].includes(ch)) {
+        tokens.push(ch);
+        i++;
+        continue;
+      }
+
+      throw new Error(`Unexpected character '${ch}' at index ${i}`);
     }
 
     return tokens;
@@ -161,10 +215,10 @@ export class MathEvaluator {
       case '/':
       case '%':
         return 2;
-      case '^':
-        return 3;
       case 'u-':
-        return 4;
+        return 3; // Unary minus binds less tightly than power (-2^2 = -4)
+      case '^':
+        return 4; // Power binds more tightly than unary minus
       default:
         return 0;
     }
@@ -194,30 +248,43 @@ export class MathEvaluator {
       } else if (token === '(') {
         opStack.push(token);
       } else if (token === ')') {
-        while (opStack.length > 0 && opStack[opStack.length - 1] !== '(') {
-          output.push(opStack.pop()!);
+        let matched = false;
+        while (opStack.length > 0) {
+          const top = opStack.pop()!;
+          if (top === '(') {
+            matched = true;
+            break;
+          }
+          output.push(top);
         }
-        if (opStack.length > 0 && opStack[opStack.length - 1] === '(') {
-          opStack.pop();
-        }
+        if (!matched) throw new Error('Mismatched parentheses');
         if (opStack.length > 0 && this.isFunction(opStack[opStack.length - 1])) {
           output.push(opStack.pop()!);
         }
       } else if (['+', '-', '*', '/', '^', '%', 'u-'].includes(token)) {
-        while (
-          opStack.length > 0 &&
-          opStack[opStack.length - 1] !== '(' &&
-          (this.precedence(opStack[opStack.length - 1]) > this.precedence(token) ||
-            (this.precedence(opStack[opStack.length - 1]) === this.precedence(token) && !this.isRightAssociative(token)))
-        ) {
-          output.push(opStack.pop()!);
+        while (opStack.length > 0) {
+          const top = opStack[opStack.length - 1];
+          if (top === '(') break;
+          if (token === 'u-') break; // Prefix unary minus should not pop a preceding operator
+
+          const p1 = this.precedence(token);
+          const p2 = this.precedence(top);
+          if (p2 > p1 || (p2 === p1 && !this.isRightAssociative(token))) {
+            output.push(opStack.pop()!);
+          } else {
+            break;
+          }
         }
         opStack.push(token);
+      } else {
+        throw new Error(`Unknown token: ${token}`);
       }
     }
 
     while (opStack.length > 0) {
-      output.push(opStack.pop()!);
+      const top = opStack.pop()!;
+      if (top === '(' || top === ')') throw new Error('Mismatched parentheses');
+      output.push(top);
     }
 
     return output;
@@ -234,8 +301,8 @@ export class MathEvaluator {
   private static evalRPN(rpn: string[], isDegreeMode: boolean): number {
     const stack: number[] = [];
 
-    const toRad = (v: number) => isDegreeMode ? (v * Math.PI) / 180 : v;
-    const toDeg = (v: number) => isDegreeMode ? (v * 180) / Math.PI : v;
+    const toRad = (v: number) => (isDegreeMode ? (v * Math.PI) / 180 : v);
+    const toDeg = (v: number) => (isDegreeMode ? (v * 180) / Math.PI : v);
 
     for (const token of rpn) {
       if (!isNaN(Number(token))) {
@@ -261,16 +328,33 @@ export class MathEvaluator {
         switch (token) {
           case 'sin': stack.push(Math.sin(toRad(val))); break;
           case 'cos': stack.push(Math.cos(toRad(val))); break;
-          case 'tan': stack.push(Math.tan(toRad(val))); break;
+          case 'tan': {
+            if (isDegreeMode) {
+              const norm = Math.abs(val) % 180;
+              if (Math.abs(norm - 90) < 1e-9) {
+                stack.push(NaN); // Undefined
+              } else {
+                stack.push(Math.tan(toRad(val)));
+              }
+            } else {
+              const norm = Math.abs(val - Math.PI / 2) % Math.PI;
+              if (norm < 1e-12 || Math.abs(norm - Math.PI) < 1e-12) {
+                stack.push(NaN);
+              } else {
+                stack.push(Math.tan(toRad(val)));
+              }
+            }
+            break;
+          }
           case 'asin': stack.push(toDeg(Math.asin(val))); break;
           case 'acos': stack.push(toDeg(Math.acos(val))); break;
           case 'atan': stack.push(toDeg(Math.atan(val))); break;
           case 'sinh': stack.push(Math.sinh(val)); break;
           case 'cosh': stack.push(Math.cosh(val)); break;
           case 'tanh': stack.push(Math.tanh(val)); break;
-          case 'log': stack.push(Math.log10(val)); break;
-          case 'ln': stack.push(Math.log(val)); break;
-          case 'sqrt': stack.push(Math.sqrt(val)); break;
+          case 'log': stack.push(val <= 0 ? NaN : Math.log10(val)); break;
+          case 'ln': stack.push(val <= 0 ? NaN : Math.log(val)); break;
+          case 'sqrt': stack.push(val < 0 ? NaN : Math.sqrt(val)); break;
           case 'abs': stack.push(Math.abs(val)); break;
           case 'fact': stack.push(this.factorial(val)); break;
         }
@@ -313,3 +397,4 @@ export class MathEvaluator {
     }
   }
 }
+
