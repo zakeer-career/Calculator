@@ -1,0 +1,6 @@
+{
+  "name": "Calculator",
+  "description": "Feature-rich calculator with scientific evaluation, matrix operations, unit and real-time currency conversions, and calculation history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
