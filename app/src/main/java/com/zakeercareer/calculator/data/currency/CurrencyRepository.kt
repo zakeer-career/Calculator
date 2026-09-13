@@ -331,11 +331,54 @@ object CurrencyRepository {
                 )
 
                 if (context != null) {
+
+
                     saveCache(context, state)
+
+
                 }
 
+
                 state
-            } else {
+
+
+                } else if (connection.responseCode == 429) {
+
+
+                    val cached = context?.let { loadCache(it) }
+
+
+                    cached?.copy(error = "Rate limit exceeded. Try again later.") 
+
+
+                        ?: ExchangeRatesState(
+
+
+                            base = "USD",
+
+
+                            rates = defaultRatesBigDecimal,
+
+
+                            availableCurrencies = defaultCurrencies,
+
+
+                            lastUpdated = "Offline (Default)",
+
+
+                            isRealtime = false,
+
+
+                            isLoading = false,
+
+
+                            error = "Rate limit exceeded. Using fallback rates."
+
+
+                        )
+
+
+                } else {
                 val cached = context?.let { loadCache(it) }
                 if (cached != null) {
                     cached.copy(error = "HTTP ${connection.responseCode}. Using persisted cache.")

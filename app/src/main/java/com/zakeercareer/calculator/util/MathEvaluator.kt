@@ -4,6 +4,20 @@ import java.util.Locale
 import kotlin.math.*
 
 object MathEvaluator {
+    private val addSubPctRegex = Regex("((?:\\d+(?:\\.\\d+)?|\\([^)]+\\)))\\s*([+\\-])\\s*(\\d+(?:\\.\\d+)?)\\s*%")
+    private val mulDivPctRegex = Regex("((?:\\d+(?:\\.\\d+)?|\\([^)]+\\)))\\s*([*/])\\s*(\\d+(?:\\.\\d+)?)\\s*%")
+    private val standalonePctRegex = Regex("(\\d+(?:\\.\\d+)?)\\s*%")
+    private val implicitRegexes = listOf(
+        Regex("(?<=[0-9])e(?![0-9+\\-])") to "*e",
+        Regex("(\\)|pi|e)(e|pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
+        Regex("(\\d)(pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
+        Regex("(\\)|pi|e)(\\d)") to "$1*$2",
+        Regex("(\\))(\\()") to "$1*$2"
+    )
+    private val numRegex = Regex("\\d+(\\.\\d+)?([eE][+-]?\\d+)?")
+    private val splitExpRegex = Regex("[eE]")
+    private val dotStripRegex = Regex("(?<=\\d)\\.(?=\\d)")
+
 
     /**
      * Strict evaluation for authoritative calculation (e.g. when pressing "=").
@@ -156,7 +170,6 @@ object MathEvaluator {
 
     private fun preprocessPercentages(input: String): String {
         var s = input
-        val addSubPctRegex = Regex("((?:\\d+(?:\\.\\d+)?|\\([^)]+\\)))\\s*([+\\-])\\s*(\\d+(?:\\.\\d+)?)\\s*%")
         while (addSubPctRegex.containsMatchIn(s)) {
             s = addSubPctRegex.replace(s) { match ->
                 val base = match.groupValues[1]
@@ -166,7 +179,6 @@ object MathEvaluator {
             }
         }
 
-        val mulDivPctRegex = Regex("((?:\\d+(?:\\.\\d+)?|\\([^)]+\\)))\\s*([*/])\\s*(\\d+(?:\\.\\d+)?)\\s*%")
         while (mulDivPctRegex.containsMatchIn(s)) {
             s = mulDivPctRegex.replace(s) { match ->
                 val base = match.groupValues[1]
@@ -176,7 +188,6 @@ object MathEvaluator {
             }
         }
 
-        val standalonePctRegex = Regex("(\\d+(?:\\.\\d+)?)\\s*%")
         s = standalonePctRegex.replace(s) { match ->
             "(${match.groupValues[1]} / 100)"
         }
@@ -549,12 +560,11 @@ object MathEvaluator {
         if (formatStyle.equals("PLAIN", ignoreCase = true)) return expr
 
         val cleanExpr = expr.replace("*", "×").replace("/", "÷").replace("-", "−")
-        val numRegex = Regex("\\d+(\\.\\d+)?([eE][+-]?\\d+)?")
         return numRegex.replace(cleanExpr) { match ->
             val numStr = match.value
             // If it contains scientific notation, leave exponent alone and format mantissa
             if (numStr.contains("e", ignoreCase = true)) {
-                val parts = numStr.split(Regex("[eE]"))
+                val parts = numStr.split(splitExpRegex)
                 val mantissa = parts[0]
                 val exp = if (parts.size > 1) parts[1] else ""
                 val formattedMantissa = formatNumberParts(mantissa, formatStyle)

@@ -29,10 +29,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CalculatorViewModel(application: Application) : AndroidViewModel(application) {
+    private var previewJob: Job? = null
 
     private val prefs: SharedPreferences = application.getSharedPreferences("calc_settings", Context.MODE_PRIVATE)
     private val dao = AppDatabase.getDatabase(application).calculationDao()
@@ -446,9 +451,9 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     val searchQuery = MutableStateFlow("")
 
     private fun escapeSqlWildcards(input: String): String {
-        return input.replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
+        return input.replace("^", "^^")
+            .replace("%", "^%")
+            .replace("_", "^_")
     }
 
     val historyList: StateFlow<List<CalculationEntity>> = combine(searchQuery, filterCategory) { query, cat ->
@@ -658,10 +663,16 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             _previewResult.value = "0"
             return
         }
-        val res = MathEvaluator.evaluatePartial(expr, _isDegreeMode.value, _decimalPrecision.value, _numberFormatStyle.value)
-        _previewResult.value = when (res) {
-            is EvaluationResult.Success -> res.formattedResult
-            is EvaluationResult.Error -> "..."
+        previewJob?.cancel()
+        previewJob = viewModelScope.launch(Dispatchers.Default) {
+            delay(50)
+            val res = MathEvaluator.evaluatePartial(expr, _isDegreeMode.value, _decimalPrecision.value, _numberFormatStyle.value)
+            withContext(Dispatchers.Main) {
+                _previewResult.value = when (res) {
+                    is EvaluationResult.Success -> res.formattedResult
+                    is EvaluationResult.Error -> "..."
+                }
+            }
         }
     }
 

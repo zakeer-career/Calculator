@@ -23,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,8 +39,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -63,7 +60,6 @@ import com.zakeercareer.calculator.util.MathEvaluator
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurrencyConverterScreen(
-    val haptic = LocalHapticFeedback.current
     viewModel: CalculatorViewModel,
     amount: String,
     fromCurrency: CurrencyInfo,
@@ -144,16 +140,16 @@ fun CurrencyConverterScreen(
         )
 
         // From Currency Card -> Swap Button -> To Currency Card
-        Column(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // From Currency Selector
             OutlinedCard(
                 onClick = { showCurrencyDialogForFrom = true },
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .weight(1f)
                     .testTag("from_currency_card")
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -167,18 +163,20 @@ fun CurrencyConverterScreen(
                 }
             }
 
-            androidx.compose.material3.FilledTonalIconButton(
-                onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); viewModel.swapCurrencies() },
-                modifier = Modifier.testTag("currency_swap_btn")
+            IconButton(
+                onClick = { viewModel.swapCurrencies() },
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .testTag("currency_swap_btn")
             ) {
-                Icon(Icons.Default.SwapVert, contentDescription = "Swap Currencies")
+                Icon(Icons.Default.SwapHoriz, contentDescription = "Swap Currencies")
             }
 
             // To Currency Selector
             OutlinedCard(
                 onClick = { showCurrencyDialogForTo = true },
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .weight(1f)
                     .testTag("to_currency_card")
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -265,7 +263,6 @@ fun CurrencyConverterScreen(
         }
 
         Spacer(modifier = Modifier.height(88.dp))
-        Spacer(modifier = Modifier.navigationBarsPadding().height(80.dp))
     }
 
     // Currency Picker Modal Sheet for FROM
@@ -278,7 +275,6 @@ fun CurrencyConverterScreen(
                 showCurrencyDialogForFrom = false
             }
         )
-        Spacer(modifier = Modifier.navigationBarsPadding().height(80.dp))
     }
 
     // Currency Picker Modal Sheet for TO
@@ -291,7 +287,6 @@ fun CurrencyConverterScreen(
                 showCurrencyDialogForTo = false
             }
         )
-        Spacer(modifier = Modifier.navigationBarsPadding().height(80.dp))
     }
 }
 
@@ -305,7 +300,6 @@ fun CurrencyPickerDialog(
     var search by remember { mutableStateOf("") }
     val filtered = currencies.filter {
         it.code.contains(search, ignoreCase = true) || it.name.contains(search, ignoreCase = true)
-        Spacer(modifier = Modifier.navigationBarsPadding().height(80.dp))
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -361,6 +355,5 @@ fun CurrencyPickerDialog(
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
-        Spacer(modifier = Modifier.navigationBarsPadding().height(80.dp))
     }
 }
