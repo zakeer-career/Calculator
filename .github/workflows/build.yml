@@ -68,10 +68,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Setup Gradle
+      - name: Setup Gradle (Latest)
         uses: gradle/actions/setup-gradle@v6
         with:
-          validate-wrappers: true
+          gradle-version: 'current'
           cache-read-only: false
           gradle-home-cache-cleanup: true
 
@@ -137,12 +137,21 @@ jobs:
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4g -XX:+UseG1GC -Djava.awt.headless=true' -Djava.awt.headless=true -Dkotlin.compiler.execution.strategy=daemon -Dksp.incremental=false"
         run: |
-          ./gradlew :app:assembleDebug \
-            --build-cache \
-            --stacktrace \
-            -Djava.awt.headless=true \
-            -Dkotlin.compiler.execution.strategy=daemon \
-            -Dksp.incremental=false
+          if command -v gradle >/dev/null 2>&1; then
+            gradle :app:assembleDebug \
+              --build-cache \
+              --stacktrace \
+              -Djava.awt.headless=true \
+              -Dkotlin.compiler.execution.strategy=daemon \
+              -Dksp.incremental=false
+          else
+            ./gradlew :app:assembleDebug \
+              --build-cache \
+              --stacktrace \
+              -Djava.awt.headless=true \
+              -Dkotlin.compiler.execution.strategy=daemon \
+              -Dksp.incremental=false
+          fi
 
       - name: Prepare Named APK Artifact
         id: prepare_apk
