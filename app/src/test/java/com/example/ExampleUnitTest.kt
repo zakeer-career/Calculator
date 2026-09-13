@@ -196,5 +196,41 @@ class ExampleUnitTest {
         assertEquals(43.0, mulMat.data[1][0], 1e-9)
         assertEquals(50.0, mulMat.data[1][1], 1e-9)
     }
+
+    @Test
+    fun testDivisionByZeroHandledGracefully() {
+        val res = MathEvaluator.evaluateStrict("10 / 0")
+        assertTrue(res is EvaluationResult.Error)
+        val errMsg = (res as EvaluationResult.Error).message
+        assertTrue(errMsg.contains("zero", ignoreCase = true) || errMsg.contains("cannot divide", ignoreCase = true))
+    }
+
+    @Test
+    fun testFactorialPrecisionAndPostfixValidation() {
+        // Floating point precision tolerance: (0.1 + 0.2) * 10 is 3.0000000000000004
+        val resPrecision = MathEvaluator.evaluateStrict("((0.1 + 0.2) * 10)!")
+        assertTrue(resPrecision is EvaluationResult.Success)
+        assertEquals(6.0, (resPrecision as EvaluationResult.Success).rawValue, 1e-9)
+
+        // Postfix 5! = 120
+        val res5Fact = MathEvaluator.evaluateStrict("5!")
+        assertTrue(res5Fact is EvaluationResult.Success)
+        assertEquals(120.0, (res5Fact as EvaluationResult.Success).rawValue, 1e-9)
+
+        // Misplaced prefix !5 should fail
+        val resPrefix = MathEvaluator.evaluateStrict("!5")
+        assertTrue(resPrefix is EvaluationResult.Error)
+    }
+
+    @Test
+    fun testImplicitMultiplicationWithEulerE() {
+        val res = MathEvaluator.evaluateStrict("(2 + 3)e")
+        assertTrue(res is EvaluationResult.Success)
+        assertEquals(5.0 * Math.E, (res as EvaluationResult.Success).rawValue, 1e-9)
+
+        val resE5 = MathEvaluator.evaluateStrict("e(5)")
+        assertTrue(resE5 is EvaluationResult.Success)
+        assertEquals(5.0 * Math.E, (resE5 as EvaluationResult.Success).rawValue, 1e-9)
+    }
 }
 

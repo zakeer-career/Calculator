@@ -127,12 +127,13 @@ object MathEvaluator {
 
         s = preprocessPercentages(s)
 
-        // Insert implicit multiplication: e.g. 2pi -> 2*pi, 3( -> 3*(, )4 -> )*4, pi( -> pi*(, 5sin -> 5*sin, )( -> )*(
+        // Insert implicit multiplication: e.g. 2pi -> 2*pi, 3( -> 3*(, )4 -> )*4, pi( -> pi*(, 5sin -> 5*sin, )( -> )*(, (2+3)e -> (2+3)*e
         // Note: Do NOT match 'e' if it is part of scientific notation like 1e3
         val implicitRegexes = listOf(
-            Regex("(\\d|\\)|pi)(pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
             Regex("(?<=[0-9])e(?![0-9+\\-])") to "*e",
-            Regex("(\\)|pi)(\\d)") to "$1*$2",
+            Regex("(\\)|pi|e)(e|pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
+            Regex("(\\d)(pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
+            Regex("(\\)|pi|e)(\\d)") to "$1*$2",
             Regex("(\\))(\\()") to "$1*$2"
         )
 
@@ -193,6 +194,21 @@ object MathEvaluator {
             when {
                 c.isWhitespace() -> i++
                 c in "+-*/^()%!" -> {
+                    // Validate postfix factorial operator positioning
+                    if (c == '!') {
+                        val prevToken = tokens.lastOrNull()
+                        val isPostfixValid = prevToken != null && (
+                            prevToken.toDoubleOrNull() != null ||
+                            prevToken == ")" ||
+                            prevToken == "pi" ||
+                            prevToken == "e" ||
+                            prevToken == "!"
+                        )
+                        if (!isPostfixValid) {
+                            throw IllegalArgumentException("Syntax Error: misplaced factorial operator '!'")
+                        }
+                    }
+
                     // Check for unary minus vs binary minus
                     if (c == '-') {
                         val prevToken = tokens.lastOrNull()
@@ -355,7 +371,7 @@ object MathEvaluator {
                         "+" -> a + b
                         "-" -> a - b
                         "*" -> a * b
-                        "/" -> if (b == 0.0) Double.NaN else a / b
+                        "/" -> if (b == 0.0) throw ArithmeticException("Cannot divide by zero") else a / b
                         "%" -> a % b
                         "^" -> a.pow(b)
                         else -> 0.0
@@ -451,10 +467,14 @@ object MathEvaluator {
     }
 
     private fun factorial(n: Double): Double {
-        if (n < 0 || n != floor(n)) throw IllegalArgumentException("Factorial undefined for non-integers")
-        if (n > 170) return Double.POSITIVE_INFINITY
+        val rounded = kotlin.math.round(n)
+        if (n < 0 || kotlin.math.abs(n - rounded) > 1e-9) {
+            throw IllegalArgumentException("Factorial undefined for non-integers")
+        }
+        val intVal = rounded.toLong()
+        if (intVal > 170) return Double.POSITIVE_INFINITY
         var res = 1.0
-        for (i in 2..n.toInt()) {
+        for (i in 2..intVal) {
             res *= i
         }
         return res

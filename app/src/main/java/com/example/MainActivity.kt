@@ -210,7 +210,7 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         if (!isChangingConfigurations) {
-            calculatorViewModel?.lockApp()
+            calculatorViewModel.lockApp()
         }
     }
 }

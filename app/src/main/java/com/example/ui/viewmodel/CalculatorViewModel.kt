@@ -445,14 +445,21 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     val filterCategory = MutableStateFlow("ALL")
     val searchQuery = MutableStateFlow("")
 
+    private fun escapeSqlWildcards(input: String): String {
+        return input.replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+    }
+
     val historyList: StateFlow<List<CalculationEntity>> = combine(searchQuery, filterCategory) { query, cat ->
         query to cat
     }.flatMapLatest { (query, cat) ->
         if (query.isNotBlank()) {
+            val sanitizedQuery = escapeSqlWildcards(query.trim())
             when (cat) {
-                "ALL" -> dao.searchHistory(query)
-                "FAVORITES" -> dao.searchFavorites(query)
-                else -> dao.searchHistoryByCategory(query, cat)
+                "ALL" -> dao.searchHistory(sanitizedQuery)
+                "FAVORITES" -> dao.searchFavorites(sanitizedQuery)
+                else -> dao.searchHistoryByCategory(sanitizedQuery, cat)
             }
         } else {
             when (cat) {
@@ -1287,10 +1294,11 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             val query = searchQuery.value
             val cat = filterCategory.value
             if (query.isNotBlank()) {
+                val sanitizedQuery = escapeSqlWildcards(query.trim())
                 when (cat) {
-                    "ALL" -> dao.clearBySearch(query)
-                    "FAVORITES" -> dao.clearFavoritesBySearch(query)
-                    else -> dao.clearBySearchAndCategory(query, cat)
+                    "ALL" -> dao.clearBySearch(sanitizedQuery)
+                    "FAVORITES" -> dao.clearFavoritesBySearch(sanitizedQuery)
+                    else -> dao.clearBySearchAndCategory(sanitizedQuery, cat)
                 }
             } else if (cat == "FAVORITES") {
                 dao.clearFavorites()
@@ -1557,7 +1565,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
                 pendingFlowUpdates.add { _themePreset.value = v }
             }
             if (json.has("decimal_precision")) {
-                val v = json.getInt("decimal_precision")
+                val v = json.getInt("decimal_precision").coerceIn(-1, 15)
                 editor.putInt("decimal_precision", v)
                 pendingFlowUpdates.add { _decimalPrecision.value = v }
             }
@@ -1587,52 +1595,52 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
                 pendingFlowUpdates.add { _numberAnimationType.value = v }
             }
             if (json.has("display_height_dp")) {
-                val v = json.getInt("display_height_dp")
+                val v = json.getInt("display_height_dp").coerceIn(100, 400)
                 editor.putInt("display_height_dp", v)
                 pendingFlowUpdates.add { _displayHeightDp.value = v }
             }
             if (json.has("display_width_padding_dp")) {
-                val v = json.getInt("display_width_padding_dp")
+                val v = json.getInt("display_width_padding_dp").coerceIn(0, 48)
                 editor.putInt("display_width_padding_dp", v)
                 pendingFlowUpdates.add { _displayWidthPaddingDp.value = v }
             }
             if (json.has("display_corner_radius_dp")) {
-                val v = json.getInt("display_corner_radius_dp")
+                val v = json.getInt("display_corner_radius_dp").coerceIn(0, 64)
                 editor.putInt("display_corner_radius_dp", v)
                 pendingFlowUpdates.add { _displayCornerRadiusDp.value = v }
             }
             if (json.has("display_main_font_size_sp")) {
-                val v = json.getInt("display_main_font_size_sp")
+                val v = json.getInt("display_main_font_size_sp").coerceIn(16, 72)
                 editor.putInt("display_main_font_size_sp", v)
                 pendingFlowUpdates.add { _displayMainFontSizeSp.value = v }
             }
             if (json.has("display_preview_font_size_sp")) {
-                val v = json.getInt("display_preview_font_size_sp")
+                val v = json.getInt("display_preview_font_size_sp").coerceIn(12, 40)
                 editor.putInt("display_preview_font_size_sp", v)
                 pendingFlowUpdates.add { _displayPreviewFontSizeSp.value = v }
             }
             if (json.has("keypad_height_scale")) {
-                val v = json.getDouble("keypad_height_scale").toFloat()
+                val v = json.getDouble("keypad_height_scale").toFloat().coerceIn(0.5f, 2.0f)
                 editor.putFloat("keypad_height_scale", v)
                 pendingFlowUpdates.add { _keypadHeightScale.value = v }
             }
             if (json.has("keypad_width_padding_dp")) {
-                val v = json.getInt("keypad_width_padding_dp")
+                val v = json.getInt("keypad_width_padding_dp").coerceIn(0, 48)
                 editor.putInt("keypad_width_padding_dp", v)
                 pendingFlowUpdates.add { _keypadWidthPaddingDp.value = v }
             }
             if (json.has("keypad_grid_spacing_dp")) {
-                val v = json.getInt("keypad_grid_spacing_dp")
+                val v = json.getInt("keypad_grid_spacing_dp").coerceIn(0, 32)
                 editor.putInt("keypad_grid_spacing_dp", v)
                 pendingFlowUpdates.add { _keypadGridSpacingDp.value = v }
             }
             if (json.has("keypad_btn_corner_radius_dp")) {
-                val v = json.getInt("keypad_btn_corner_radius_dp")
+                val v = json.getInt("keypad_btn_corner_radius_dp").coerceIn(0, 64)
                 editor.putInt("keypad_btn_corner_radius_dp", v)
                 pendingFlowUpdates.add { _keypadBtnCornerRadiusDp.value = v }
             }
             if (json.has("keypad_btn_font_size_sp")) {
-                val v = json.getInt("keypad_btn_font_size_sp")
+                val v = json.getInt("keypad_btn_font_size_sp").coerceIn(12, 40)
                 editor.putInt("keypad_btn_font_size_sp", v)
                 pendingFlowUpdates.add { _keypadBtnFontSizeSp.value = v }
             }
@@ -1682,12 +1690,12 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
                 pendingFlowUpdates.add { _calcHistoryGridlineStyle.value = v }
             }
             if (json.has("calc_history_item_spacing_dp")) {
-                val v = json.getInt("calc_history_item_spacing_dp")
+                val v = json.getInt("calc_history_item_spacing_dp").coerceIn(2, 32)
                 editor.putInt("calc_history_item_spacing_dp", v)
                 pendingFlowUpdates.add { _calcHistoryItemSpacingDp.value = v }
             }
             if (json.has("calc_history_max_items_count")) {
-                val v = json.getInt("calc_history_max_items_count")
+                val v = json.getInt("calc_history_max_items_count").coerceIn(10, 1000)
                 editor.putInt("calc_history_max_items_count", v)
                 pendingFlowUpdates.add { _calcHistoryMaxItemsCount.value = v }
             }
@@ -1732,7 +1740,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
                 pendingFlowUpdates.add { _navBarStyle.value = v }
             }
             if (json.has("nav_bar_blur_opacity")) {
-                val v = json.getDouble("nav_bar_blur_opacity").toFloat()
+                val v = json.getDouble("nav_bar_blur_opacity").toFloat().coerceIn(0.0f, 1.0f)
                 editor.putFloat("nav_bar_blur_opacity", v)
                 pendingFlowUpdates.add { _navBarBlurOpacity.value = v }
             }
