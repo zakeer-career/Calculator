@@ -61,7 +61,7 @@ jobs:
           echo "Resolved version: ${VERSION} (Tag: ${RELEASE_TAG}, Prerelease: ${IS_PRERELEASE})"
 
       - name: Set up JDK 21 (Latest LTS)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
