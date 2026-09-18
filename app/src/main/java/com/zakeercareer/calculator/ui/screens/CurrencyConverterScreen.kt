@@ -28,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.zakeercareer.calculator.data.currency.RateSource
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -85,7 +86,11 @@ fun CurrencyConverterScreen(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (exchangeState.isRealtime) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest
+                containerColor = when (exchangeState.rateSource) {
+                    RateSource.LIVE -> MaterialTheme.colorScheme.primaryContainer
+                    RateSource.CACHE -> MaterialTheme.colorScheme.secondaryContainer
+                    RateSource.DEFAULT -> MaterialTheme.colorScheme.surfaceContainerHighest
+                }
             )
         ) {
             Row(
@@ -97,7 +102,11 @@ fun CurrencyConverterScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (exchangeState.isRealtime) "⚡ Real-time Rates Active" else "🌐 Offline Exchange Rates",
+                        text = when (exchangeState.rateSource) {
+                            RateSource.LIVE -> "⚡ Real-time Rates Active"
+                            RateSource.CACHE -> "💾 Cached Rates Active"
+                            RateSource.DEFAULT -> "🌐 Offline Default Rates"
+                        },
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium
                     )

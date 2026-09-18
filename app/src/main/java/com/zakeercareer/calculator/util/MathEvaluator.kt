@@ -145,9 +145,9 @@ object MathEvaluator {
         // Note: Do NOT match 'e' if it is part of scientific notation like 1e3
         val implicitRegexes = listOf(
             Regex("(?<=[0-9])e(?![0-9+\\-])") to "*e",
-            Regex("(\\)|pi|e)(e|pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
+            Regex("(\\)|pi|(?<![0-9.])e)(e|pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
             Regex("(\\d)(pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",
-            Regex("(\\)|pi|e)(\\d)") to "$1*$2",
+            Regex("(\\)|pi|(?<![0-9.])e)(\\d)") to "$1*$2",
             Regex("(\\))(\\()") to "$1*$2"
         )
 
@@ -428,7 +428,7 @@ object MathEvaluator {
                             if (isDegreeMode) {
                                 val normDeg = ((a % 360.0) + 360.0) % 360.0
                                 when {
-                                    normDeg == 90.0 || normDeg == 270.0 -> Double.NaN // Undefined at 90 deg + k * 180 deg
+                                    normDeg == 90.0 || normDeg == 270.0 -> throw ArithmeticException("Domain error: tan(x) is undefined at odd multiples of 90°")
                                     normDeg == 0.0 || normDeg == 180.0 || normDeg == 360.0 -> 0.0
                                     normDeg == 45.0 || normDeg == 225.0 -> 1.0
                                     normDeg == 135.0 || normDeg == 315.0 -> -1.0
@@ -437,17 +437,19 @@ object MathEvaluator {
                             } else {
                                 val norm = abs(a - PI / 2) % PI
                                 if (norm < 1e-12 || abs(norm - PI) < 1e-12) {
-                                    Double.NaN
+                                    throw ArithmeticException("Domain error: tan(x) is undefined at π/2 + kπ")
                                 } else {
                                     tan(radVal)
                                 }
                             }
                         }
                         "asin" -> {
+                            if (a < -1.0 || a > 1.0) throw IllegalArgumentException("Domain error: asin(x) requires -1 ≤ x ≤ 1")
                             val v = asin(a)
                             if (isDegreeMode) Math.toDegrees(v) else v
                         }
                         "acos" -> {
+                            if (a < -1.0 || a > 1.0) throw IllegalArgumentException("Domain error: acos(x) requires -1 ≤ x ≤ 1")
                             val v = acos(a)
                             if (isDegreeMode) Math.toDegrees(v) else v
                         }
@@ -459,11 +461,26 @@ object MathEvaluator {
                         "cosh" -> cosh(a)
                         "tanh" -> tanh(a)
                         "asinh" -> asinh(a)
-                        "acosh" -> acosh(a)
-                        "atanh" -> atanh(a)
-                        "log" -> if (a <= 0.0) Double.NaN else log10(a)
-                        "ln" -> if (a <= 0.0) Double.NaN else ln(a)
-                        "sqrt" -> if (a < 0.0) Double.NaN else sqrt(a)
+                        "acosh" -> {
+                            if (a < 1.0) throw IllegalArgumentException("Domain error: acosh(x) requires x ≥ 1")
+                            acosh(a)
+                        }
+                        "atanh" -> {
+                            if (a <= -1.0 || a >= 1.0) throw IllegalArgumentException("Domain error: atanh(x) requires -1 < x < 1")
+                            atanh(a)
+                        }
+                        "log" -> {
+                            if (a <= 0.0) throw IllegalArgumentException("Domain error: log(x) requires x > 0")
+                            log10(a)
+                        }
+                        "ln" -> {
+                            if (a <= 0.0) throw IllegalArgumentException("Domain error: ln(x) requires x > 0")
+                            ln(a)
+                        }
+                        "sqrt" -> {
+                            if (a < 0.0) throw IllegalArgumentException("Domain error: sqrt(x) requires x ≥ 0")
+                            sqrt(a)
+                        }
                         "abs" -> abs(a)
                         else -> 0.0
                     }
@@ -479,11 +496,14 @@ object MathEvaluator {
 
     private fun factorial(n: Double): Double {
         val rounded = kotlin.math.round(n)
-        if (n < 0 || kotlin.math.abs(n - rounded) > 1e-9) {
+        if (n < 0) {
+            throw IllegalArgumentException("Domain error: factorial undefined for negative numbers")
+        }
+        if (kotlin.math.abs(n - rounded) > 1e-9) {
             throw IllegalArgumentException("Factorial undefined for non-integers")
         }
         val intVal = rounded.toLong()
-        if (intVal > 170) return Double.POSITIVE_INFINITY
+        if (intVal > 170) throw ArithmeticException("Factorial overflow: max supported is 170!")
         var res = 1.0
         for (i in 2..intVal) {
             res *= i

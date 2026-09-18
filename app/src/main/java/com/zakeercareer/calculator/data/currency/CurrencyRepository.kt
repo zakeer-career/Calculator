@@ -14,6 +14,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+enum class RateSource {
+    LIVE,
+    CACHE,
+    DEFAULT
+}
+
 data class CurrencyInfo(
     val code: String,
     val name: String,
@@ -26,6 +32,8 @@ data class ExchangeRatesState(
     val availableCurrencies: List<CurrencyInfo> = defaultCurrencies,
     val lastUpdated: String = "Offline Default Rates",
     val isRealtime: Boolean = false,
+    val rateSource: RateSource = RateSource.DEFAULT,
+    val cachedAtEpochMs: Long = 0L,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -124,7 +132,7 @@ val defaultCurrencies = listOf(
 val defaultRates = mapOf(
     "USD" to 1.0,
     "EUR" to 0.92,
-    "GBP" to 0.78,
+    "GBP" to 0.79,
     "JPY" to 155.20,
     "CAD" to 1.36,
     "AUD" to 1.52,
@@ -233,6 +241,7 @@ object CurrencyRepository {
     private const val KEY_RATES_JSON = "cached_rates_json"
     private const val KEY_BASE = "cached_base"
     private const val KEY_TIMESTAMP = "cached_timestamp"
+    private const val KEY_CACHED_AT_MS = "cached_at_epoch_ms"
 
     fun saveCache(context: Context, state: ExchangeRatesState) {
         try {
@@ -241,10 +250,12 @@ object CurrencyRepository {
             for ((code, rate) in state.rates) {
                 json.put(code, rate.toPlainString())
             }
+            val now = System.currentTimeMillis()
             prefs.edit()
                 .putString(KEY_RATES_JSON, json.toString())
                 .putString(KEY_BASE, state.base)
                 .putString(KEY_TIMESTAMP, state.lastUpdated)
+                .putLong(KEY_CACHED_AT_MS, if (state.cachedAtEpochMs > 0) state.cachedAtEpochMs else now)
                 .apply()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -257,6 +268,7 @@ object CurrencyRepository {
             val jsonStr = prefs.getString(KEY_RATES_JSON, null) ?: return null
             val base = prefs.getString(KEY_BASE, "USD") ?: "USD"
             val timestamp = prefs.getString(KEY_TIMESTAMP, "Persisted Offline Cache") ?: "Persisted Offline Cache"
+            val cachedAtMs = prefs.getLong(KEY_CACHED_AT_MS, 0L)
             val json = JSONObject(jsonStr)
 
             val ratesMap = mutableMapOf<String, BigDecimal>()
@@ -274,12 +286,27 @@ object CurrencyRepository {
                 }
             }
 
+            val now = System.currentTimeMillis()
+            val freshness = if (cachedAtMs > 0) {
+                val diffMs = now - cachedAtMs
+                when {
+                    diffMs < 60_000L -> "just now"
+                    diffMs < 3_600_000L -> "${diffMs / 60_000L}m ago"
+                    diffMs < 86_400_000L -> "${diffMs / 3_600_000L}h ago"
+                    else -> "${diffMs / 86_400_000L}d ago"
+                }
+            } else {
+                timestamp
+            }
+
             ExchangeRatesState(
                 base = base,
                 rates = ratesMap,
                 availableCurrencies = dynamicCurrencies.sortedBy { it.code },
-                lastUpdated = if (timestamp.startsWith("Cached")) timestamp else "Cached ($timestamp)",
-                isRealtime = true,
+                lastUpdated = timestamp,
+                isRealtime = false,
+                rateSource = RateSource.CACHE,
+                cachedAtEpochMs = cachedAtMs,
                 isLoading = false,
                 error = null
             )
@@ -319,6 +346,7 @@ object CurrencyRepository {
 
                 val df = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
                 val timeStr = df.format(Date())
+                val now = System.currentTimeMillis()
 
                 val state = ExchangeRatesState(
                     base = "USD",
@@ -326,59 +354,31 @@ object CurrencyRepository {
                     availableCurrencies = dynamicCurrencies.sortedBy { it.code },
                     lastUpdated = "Live ($timeStr)",
                     isRealtime = true,
+                    rateSource = RateSource.LIVE,
+                    cachedAtEpochMs = now,
                     isLoading = false,
                     error = null
                 )
 
                 if (context != null) {
-
-
                     saveCache(context, state)
-
-
                 }
 
-
                 state
-
-
-                } else if (connection.responseCode == 429) {
-
-
-                    val cached = context?.let { loadCache(it) }
-
-
-                    cached?.copy(error = "Rate limit exceeded. Try again later.") 
-
-
-                        ?: ExchangeRatesState(
-
-
-                            base = "USD",
-
-
-                            rates = defaultRatesBigDecimal,
-
-
-                            availableCurrencies = defaultCurrencies,
-
-
-                            lastUpdated = "Offline (Default)",
-
-
-                            isRealtime = false,
-
-
-                            isLoading = false,
-
-
-                            error = "Rate limit exceeded. Using fallback rates."
-
-
-                        )
-
-
-                } else {
+            } else if (connection.responseCode == 429) {
+                val cached = context?.let { loadCache(it) }
+                cached?.copy(error = "Rate limit exceeded. Try again later.") 
+                    ?: ExchangeRatesState(
+                        base = "USD",
+                        rates = defaultRatesBigDecimal,
+                        availableCurrencies = defaultCurrencies,
+                        lastUpdated = "Offline (Default)",
+                        isRealtime = false,
+                        rateSource = RateSource.DEFAULT,
+                        isLoading = false,
+                        error = "Rate limit exceeded. Using fallback rates."
+                    )
+            } else {
                 val cached = context?.let { loadCache(it) }
                 if (cached != null) {
                     cached.copy(error = "HTTP ${connection.responseCode}. Using persisted cache.")
@@ -389,6 +389,7 @@ object CurrencyRepository {
                         availableCurrencies = defaultCurrencies,
                         lastUpdated = "Offline (Default)",
                         isRealtime = false,
+                        rateSource = RateSource.DEFAULT,
                         isLoading = false,
                         error = "HTTP ${connection.responseCode}. Using fallback rates."
                     )
@@ -405,6 +406,7 @@ object CurrencyRepository {
                     availableCurrencies = defaultCurrencies,
                     lastUpdated = "Offline Fallback",
                     isRealtime = false,
+                    rateSource = RateSource.DEFAULT,
                     isLoading = false,
                     error = "Network offline. Using fallback exchange rates."
                 )

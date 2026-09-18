@@ -1304,21 +1304,39 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    sealed interface HistoryOpResult {
+        data object Success : HistoryOpResult
+        data object DeletionLocked : HistoryOpResult
+        data class Failure(val cause: Throwable) : HistoryOpResult
+    }
+
+    suspend fun deleteHistoryEntryAwait(entry: CalculationEntity): HistoryOpResult {
+        if (_historyDeletionLocked.value) {
+            return HistoryOpResult.DeletionLocked
+        }
+        return try {
+            dao.setTrashStatus(entry.id, true)
+            HistoryOpResult.Success
+        } catch (e: Throwable) {
+            HistoryOpResult.Failure(e)
+        }
+    }
+
     fun deleteHistoryEntry(entry: CalculationEntity): Boolean {
         if (_historyDeletionLocked.value) {
             return false
         }
         viewModelScope.launch {
-            dao.setTrashStatus(entry.id, true)
+            deleteHistoryEntryAwait(entry)
         }
         return true
     }
 
-    fun clearHistory(): Boolean {
+    suspend fun clearHistoryAwait(): HistoryOpResult {
         if (_historyDeletionLocked.value) {
-            return false
+            return HistoryOpResult.DeletionLocked
         }
-        viewModelScope.launch {
+        return try {
             val query = searchQuery.value
             val cat = filterCategory.value
             if (query.isNotBlank()) {
@@ -1335,6 +1353,18 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             } else {
                 dao.clearByCategory(cat)
             }
+            HistoryOpResult.Success
+        } catch (e: Throwable) {
+            HistoryOpResult.Failure(e)
+        }
+    }
+
+    fun clearHistory(): Boolean {
+        if (_historyDeletionLocked.value) {
+            return false
+        }
+        viewModelScope.launch {
+            clearHistoryAwait()
         }
         return true
     }
@@ -1540,6 +1570,9 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     // --- EXPORT & IMPORT SETTINGS JSON ---
     fun exportSettingsJson(): String {
         val json = org.json.JSONObject()
+        json.put("schemaVersion", 1)
+        json.put("appVersion", "1.0")
+
         json.put("theme_preset", themePreset.value)
         json.put("decimal_precision", decimalPrecision.value)
         json.put("compact_view", compactView.value)
@@ -1552,7 +1585,7 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         json.put("display_corner_radius_dp", displayCornerRadiusDp.value)
         json.put("display_main_font_size_sp", displayMainFontSizeSp.value)
         json.put("display_preview_font_size_sp", displayPreviewFontSizeSp.value)
-        json.put("keypad_height_scale", keypadHeightScale.value)
+        json.put("keypad_height_scale", keypadHeightScale.value.toDouble())
         json.put("keypad_width_padding_dp", keypadWidthPaddingDp.value)
         json.put("keypad_grid_spacing_dp", keypadGridSpacingDp.value)
         json.put("keypad_btn_corner_radius_dp", keypadBtnCornerRadiusDp.value)
@@ -1577,20 +1610,62 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         json.put("haptic_feedback", hapticFeedbackEnabled.value)
         json.put("show_bottom_bar", showBottomBar.value)
         json.put("nav_bar_style", navBarStyle.value)
-        json.put("nav_bar_blur_opacity", navBarBlurOpacity.value)
+        json.put("nav_bar_blur_opacity", navBarBlurOpacity.value.toDouble())
+
+        // Additional portable settings
+        json.put("tab_order", prefs.getString("tab_order", null) ?: defaultTabList.joinToString(","))
+        val enabledArr = org.json.JSONArray()
+        enabledTabs.value.forEach { enabledArr.put(it) }
+        json.put("enabled_tabs", enabledArr)
+        json.put("pill_nav_enabled", pillNavStyle.value)
+        json.put("icon_only_nav", iconOnlyNav.value)
+        json.put("nav_indicator_size", navIndicatorSize.value)
+        json.put("nav_indicator_scale", navIndicatorScale.value.toDouble())
+        json.put("nav_animation_speed", navAnimationSpeed.value)
+        json.put("calc_from_currency_code", fromCurrency.value.code)
+        json.put("calc_to_currency_code", toCurrency.value.code)
+        json.put("degree_mode", isDegreeMode.value)
+        json.put("number_format_style", numberFormatStyle.value)
+
         return json.toString(4)
     }
 
     fun importSettingsFromJson(jsonStr: String): Boolean {
         return try {
             val json = org.json.JSONObject(jsonStr)
+            val schemaVer = json.optInt("schemaVersion", 1)
+            if (schemaVer > 1) {
+                // Incompatible future schema
+                return false
+            }
+
             val editor = prefs.edit()
             val pendingFlowUpdates = mutableListOf<() -> Unit>()
 
+            val validThemePresets = setOf(
+                "MATERIAL_YOU", "AMOLED", "MIDNIGHT_CYAN", "CYBERPUNK",
+                "SOLAR_GOLD", "EMERALD_MINT", "ROSE_GOLD", "NEON_PURPLE",
+                "DARK_SLATE", "HIGH_CONTRAST", "WARM_RETRO", "OCEAN_DEEP"
+            )
+            val validBtnShapes = setOf("ROUNDED_RECT", "CIRCLE", "SQUIRCLE", "PILL", "SUBTLE_ROUNDED")
+            val validDisplayFontSizes = setOf("AUTO", "LARGE", "MEDIUM", "COMPACT")
+            val validDisplayAligns = setOf("RIGHT", "CENTER", "LEFT")
+            val validNumberAnimTypes = setOf("SLIDE", "FADE", "SCALE", "POP", "NONE")
+            val validPreviewAnimStyles = setOf("SLIDE", "FADE", "SCALE", "POP")
+            val validSwipeActions = setOf("COPY", "RELOAD", "DELETE", "FAVORITE", "NONE")
+            val validGridlineStyles = setOf("SOLID", "DASHED", "DOT", "GLOW", "NONE")
+            val validThemeContrastModes = setOf("AUTO", "NORMAL", "HIGH", "MAXIMUM")
+            val validNavBarStyles = setOf("MATERIAL3", "LIQUID_GLASS", "FLOATING_PILL", "COMPACT_DOCK", "MINIMAL_BAR")
+            val validNavIndicatorSizes = setOf("SMALL", "MEDIUM", "LARGE", "CIRCLE")
+            val validNavAnimationSpeeds = setOf("SLOW", "NORMAL", "FAST", "INSTANT")
+            val validNumberFormatStyles = setOf("STANDARD", "SCIENTIFIC", "EUROPEAN", "INDIAN", "PLAIN")
+
             if (json.has("theme_preset")) {
                 val v = json.getString("theme_preset")
-                editor.putString("theme_preset", v)
-                pendingFlowUpdates.add { _themePreset.value = v }
+                if (validThemePresets.contains(v)) {
+                    editor.putString("theme_preset", v)
+                    pendingFlowUpdates.add { _themePreset.value = v }
+                }
             }
             if (json.has("decimal_precision")) {
                 val v = json.getInt("decimal_precision").coerceIn(-1, 15)
@@ -1604,23 +1679,31 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             }
             if (json.has("btn_shape")) {
                 val v = json.getString("btn_shape")
-                editor.putString("btn_shape", v)
-                pendingFlowUpdates.add { _btnShape.value = v }
+                if (validBtnShapes.contains(v)) {
+                    editor.putString("btn_shape", v)
+                    pendingFlowUpdates.add { _btnShape.value = v }
+                }
             }
             if (json.has("display_font_size")) {
                 val v = json.getString("display_font_size")
-                editor.putString("display_font_size", v)
-                pendingFlowUpdates.add { _displayFontSize.value = v }
+                if (validDisplayFontSizes.contains(v)) {
+                    editor.putString("display_font_size", v)
+                    pendingFlowUpdates.add { _displayFontSize.value = v }
+                }
             }
             if (json.has("display_align")) {
                 val v = json.getString("display_align")
-                editor.putString("display_align", v)
-                pendingFlowUpdates.add { _displayAlign.value = v }
+                if (validDisplayAligns.contains(v)) {
+                    editor.putString("display_align", v)
+                    pendingFlowUpdates.add { _displayAlign.value = v }
+                }
             }
             if (json.has("number_anim_type")) {
                 val v = json.getString("number_anim_type")
-                editor.putString("number_anim_type", v)
-                pendingFlowUpdates.add { _numberAnimationType.value = v }
+                if (validNumberAnimTypes.contains(v)) {
+                    editor.putString("number_anim_type", v)
+                    pendingFlowUpdates.add { _numberAnimationType.value = v }
+                }
             }
             if (json.has("display_height_dp")) {
                 val v = json.getInt("display_height_dp").coerceIn(100, 400)
@@ -1689,8 +1772,10 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             }
             if (json.has("live_preview_anim_style")) {
                 val v = json.getString("live_preview_anim_style")
-                editor.putString("live_preview_anim_style", v)
-                pendingFlowUpdates.add { _livePreviewAnimStyle.value = v }
+                if (validPreviewAnimStyles.contains(v)) {
+                    editor.putString("live_preview_anim_style", v)
+                    pendingFlowUpdates.add { _livePreviewAnimStyle.value = v }
+                }
             }
             if (json.has("history_gridlines_enabled")) {
                 val v = json.getBoolean("history_gridlines_enabled")
@@ -1699,13 +1784,17 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             }
             if (json.has("history_swipe_left_action")) {
                 val v = json.getString("history_swipe_left_action")
-                editor.putString("history_swipe_left_action", v)
-                pendingFlowUpdates.add { _historySwipeLeftAction.value = v }
+                if (validSwipeActions.contains(v)) {
+                    editor.putString("history_swipe_left_action", v)
+                    pendingFlowUpdates.add { _historySwipeLeftAction.value = v }
+                }
             }
             if (json.has("history_swipe_right_action")) {
                 val v = json.getString("history_swipe_right_action")
-                editor.putString("history_swipe_right_action", v)
-                pendingFlowUpdates.add { _historySwipeRightAction.value = v }
+                if (validSwipeActions.contains(v)) {
+                    editor.putString("history_swipe_right_action", v)
+                    pendingFlowUpdates.add { _historySwipeRightAction.value = v }
+                }
             }
             if (json.has("history_deletion_locked")) {
                 val v = json.getBoolean("history_deletion_locked")
@@ -1714,8 +1803,10 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             }
             if (json.has("calc_history_gridline_style")) {
                 val v = json.getString("calc_history_gridline_style")
-                editor.putString("calc_history_gridline_style", v)
-                pendingFlowUpdates.add { _calcHistoryGridlineStyle.value = v }
+                if (validGridlineStyles.contains(v)) {
+                    editor.putString("calc_history_gridline_style", v)
+                    pendingFlowUpdates.add { _calcHistoryGridlineStyle.value = v }
+                }
             }
             if (json.has("calc_history_item_spacing_dp")) {
                 val v = json.getInt("calc_history_item_spacing_dp").coerceIn(2, 32)
@@ -1744,8 +1835,10 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             }
             if (json.has("theme_contrast_mode")) {
                 val v = json.getString("theme_contrast_mode")
-                editor.putString("theme_contrast_mode", v)
-                pendingFlowUpdates.add { _themeContrastMode.value = v }
+                if (validThemeContrastModes.contains(v)) {
+                    editor.putString("theme_contrast_mode", v)
+                    pendingFlowUpdates.add { _themeContrastMode.value = v }
+                }
             }
             if (json.has("top_history_banner")) {
                 val v = json.getBoolean("top_history_banner")
@@ -1764,8 +1857,10 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             }
             if (json.has("nav_bar_style")) {
                 val v = json.getString("nav_bar_style")
-                editor.putString("nav_bar_style", v)
-                pendingFlowUpdates.add { _navBarStyle.value = v }
+                if (validNavBarStyles.contains(v)) {
+                    editor.putString("nav_bar_style", v)
+                    pendingFlowUpdates.add { _navBarStyle.value = v }
+                }
             }
             if (json.has("nav_bar_blur_opacity")) {
                 val v = json.getDouble("nav_bar_blur_opacity").toFloat().coerceIn(0.0f, 1.0f)
@@ -1776,6 +1871,93 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
                 val v = json.getBoolean("ultra_performance_mode")
                 editor.putBoolean("ultra_performance_mode", v)
                 pendingFlowUpdates.add { _ultraPerformanceMode.value = v }
+            }
+
+            // Additional portable settings
+            if (json.has("pill_nav_enabled")) {
+                val v = json.getBoolean("pill_nav_enabled")
+                editor.putBoolean("pill_nav_enabled", v)
+                pendingFlowUpdates.add { _pillNavStyle.value = v }
+            }
+            if (json.has("icon_only_nav")) {
+                val v = json.getBoolean("icon_only_nav")
+                editor.putBoolean("icon_only_nav", v)
+                pendingFlowUpdates.add { _iconOnlyNav.value = v }
+            }
+            if (json.has("nav_indicator_size")) {
+                val v = json.getString("nav_indicator_size")
+                if (validNavIndicatorSizes.contains(v)) {
+                    editor.putString("nav_indicator_size", v)
+                    pendingFlowUpdates.add { _navIndicatorSize.value = v }
+                }
+            }
+            if (json.has("nav_indicator_scale")) {
+                val v = json.getDouble("nav_indicator_scale").toFloat().coerceIn(0.5f, 2.0f)
+                editor.putFloat("nav_indicator_scale", v)
+                pendingFlowUpdates.add { _navIndicatorScale.value = v }
+            }
+            if (json.has("nav_animation_speed")) {
+                val v = json.getString("nav_animation_speed")
+                if (validNavAnimationSpeeds.contains(v)) {
+                    editor.putString("nav_animation_speed", v)
+                    pendingFlowUpdates.add { _navAnimationSpeed.value = v }
+                }
+            }
+            if (json.has("number_format_style")) {
+                val v = json.getString("number_format_style")
+                if (validNumberFormatStyles.contains(v)) {
+                    editor.putString("number_format_style", v)
+                    pendingFlowUpdates.add { _numberFormatStyle.value = v }
+                }
+            }
+            if (json.has("calc_from_currency_code")) {
+                val code = json.getString("calc_from_currency_code").trim().uppercase(java.util.Locale.US)
+                val curr = defaultCurrencies.find { it.code == code }
+                if (curr != null) {
+                    editor.putString("calc_from_currency_code", code)
+                    pendingFlowUpdates.add { _fromCurrency.value = curr }
+                }
+            }
+            if (json.has("calc_to_currency_code")) {
+                val code = json.getString("calc_to_currency_code").trim().uppercase(java.util.Locale.US)
+                val curr = defaultCurrencies.find { it.code == code }
+                if (curr != null) {
+                    editor.putString("calc_to_currency_code", code)
+                    pendingFlowUpdates.add { _toCurrency.value = curr }
+                }
+            }
+            if (json.has("degree_mode")) {
+                val v = json.getBoolean("degree_mode")
+                editor.putBoolean("degree_mode", v)
+                pendingFlowUpdates.add { _isDegreeMode.value = v }
+            }
+            if (json.has("tab_order")) {
+                val orderStr = json.getString("tab_order")
+                val validSet = defaultTabList.toSet()
+                val parsed = orderStr.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() && validSet.contains(it) }
+                    .distinct()
+                    .toMutableList()
+                defaultTabList.forEach { if (!parsed.contains(it)) parsed.add(it) }
+                val finalOrderStr = parsed.joinToString(",")
+                editor.putString("tab_order", finalOrderStr)
+                pendingFlowUpdates.add { _tabOrder.value = parsed }
+            }
+            if (json.has("enabled_tabs")) {
+                val arr = json.getJSONArray("enabled_tabs")
+                val validSet = defaultTabList.toSet()
+                val set = mutableSetOf<String>()
+                for (i in 0 until arr.length()) {
+                    val tab = arr.getString(i).trim()
+                    if (validSet.contains(tab)) {
+                        set.add(tab)
+                    }
+                }
+                if (set.isEmpty()) set.addAll(defaultTabList)
+                set.add("CALCULATOR")
+                editor.putStringSet("enabled_tabs", set)
+                pendingFlowUpdates.add { _enabledTabs.value = set }
             }
 
             val committed = editor.commit()

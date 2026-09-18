@@ -13,9 +13,6 @@ interface CalculationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entry: CalculationEntity): Long
 
-    @Update
-    suspend fun update(entry: CalculationEntity)
-
     @Delete
     suspend fun delete(entry: CalculationEntity)
 

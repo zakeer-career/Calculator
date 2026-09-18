@@ -60,7 +60,7 @@ class ExampleUnitTest {
     @Test
     fun testTrigSingularity() {
         // tan(90 deg) is undefined
-        val res = MathEvaluator.evaluateStrict("tan(90)", isDegree = true)
+        val res = MathEvaluator.evaluateStrict("tan(90)", isDegreeMode = true)
         assertTrue(res is EvaluationResult.Error)
     }
 
@@ -80,10 +80,10 @@ class ExampleUnitTest {
         val invRes = MatrixUtils.inverse(matA)
         assertTrue(invRes is MatrixResult.SuccessMatrix)
         val inv = (invRes as MatrixResult.SuccessMatrix).matrix
-        assertEquals(0.6, inv.data[0][0], 1e-9)
-        assertEquals(-0.7, inv.data[0][1], 1e-9)
-        assertEquals(-0.2, inv.data[1][0], 1e-9)
-        assertEquals(0.4, inv.data[1][1], 1e-9)
+        assertEquals(0.6, inv.values[0][0], 1e-9)
+        assertEquals(-0.7, inv.values[0][1], 1e-9)
+        assertEquals(-0.2, inv.values[1][0], 1e-9)
+        assertEquals(0.4, inv.values[1][1], 1e-9)
     }
 
     @Test
@@ -141,12 +141,12 @@ class ExampleUnitTest {
     @Test
     fun testMathEvaluatorTrigAndLogs() {
         // sin(30 deg) = 0.5
-        val sin30 = MathEvaluator.evaluateStrict("sin(30)", isDegree = true)
+        val sin30 = MathEvaluator.evaluateStrict("sin(30)", isDegreeMode = true)
         assertTrue(sin30 is EvaluationResult.Success)
         assertEquals(0.5, (sin30 as EvaluationResult.Success).rawValue, 1e-9)
 
         // cos(60 deg) = 0.5
-        val cos60 = MathEvaluator.evaluateStrict("cos(60)", isDegree = true)
+        val cos60 = MathEvaluator.evaluateStrict("cos(60)", isDegreeMode = true)
         assertTrue(cos60 is EvaluationResult.Success)
         assertEquals(0.5, (cos60 as EvaluationResult.Success).rawValue, 1e-9)
 
@@ -182,19 +182,19 @@ class ExampleUnitTest {
         val addRes = MatrixUtils.add(matA, matB)
         assertTrue(addRes is MatrixResult.SuccessMatrix)
         val addMat = (addRes as MatrixResult.SuccessMatrix).matrix
-        assertEquals(6.0, addMat.data[0][0], 1e-9)
-        assertEquals(8.0, addMat.data[0][1], 1e-9)
-        assertEquals(10.0, addMat.data[1][0], 1e-9)
-        assertEquals(12.0, addMat.data[1][1], 1e-9)
+        assertEquals(6.0, addMat.values[0][0], 1e-9)
+        assertEquals(8.0, addMat.values[0][1], 1e-9)
+        assertEquals(10.0, addMat.values[1][0], 1e-9)
+        assertEquals(12.0, addMat.values[1][1], 1e-9)
 
         // Multiplication: [ [1*5+2*7, 1*6+2*8], [3*5+4*7, 3*6+4*8] ] = [ [19, 22], [43, 50] ]
         val mulRes = MatrixUtils.multiply(matA, matB)
         assertTrue(mulRes is MatrixResult.SuccessMatrix)
         val mulMat = (mulRes as MatrixResult.SuccessMatrix).matrix
-        assertEquals(19.0, mulMat.data[0][0], 1e-9)
-        assertEquals(22.0, mulMat.data[0][1], 1e-9)
-        assertEquals(43.0, mulMat.data[1][0], 1e-9)
-        assertEquals(50.0, mulMat.data[1][1], 1e-9)
+        assertEquals(19.0, mulMat.values[0][0], 1e-9)
+        assertEquals(22.0, mulMat.values[0][1], 1e-9)
+        assertEquals(43.0, mulMat.values[1][0], 1e-9)
+        assertEquals(50.0, mulMat.values[1][1], 1e-9)
     }
 
     @Test
@@ -244,6 +244,32 @@ class ExampleUnitTest {
         val resAddPct = MathEvaluator.evaluateStrict("100 + 1e2%")
         assertTrue(resAddPct is EvaluationResult.Success)
         assertEquals(200.0, (resAddPct as EvaluationResult.Success).rawValue, 1e-9)
+    }
+
+    @Test
+    fun testMathematicalDomainErrors() {
+        // asin(2) domain error: -1 <= x <= 1
+        val resAsin = MathEvaluator.evaluateStrict("asin(2)")
+        assertTrue(resAsin is EvaluationResult.Error)
+
+        // sqrt(-4) domain error: x >= 0
+        val resSqrt = MathEvaluator.evaluateStrict("sqrt(-4)")
+        assertTrue(resSqrt is EvaluationResult.Error)
+
+        // log(-10) domain error: x > 0
+        val resLog = MathEvaluator.evaluateStrict("log(-10)")
+        assertTrue(resLog is EvaluationResult.Error)
+
+        // tan(90) in degree mode
+        val resTan90 = MathEvaluator.evaluateStrict("tan(90)", isDegreeMode = true)
+        assertTrue(resTan90 is EvaluationResult.Error)
+    }
+
+    @Test
+    fun testRateSourceEnum() {
+        val state = com.zakeercareer.calculator.data.currency.ExchangeRatesState()
+        assertEquals(com.zakeercareer.calculator.data.currency.RateSource.DEFAULT, state.rateSource)
+        assertFalse(state.isRealtime)
     }
 }
 

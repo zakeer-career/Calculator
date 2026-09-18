@@ -107,7 +107,7 @@ class ExampleRobolectricTest {
     fun `test scoped history deletion`() = runBlocking {
         val dao = db.calculationDao()
 
-        dao.insert(CalculationEntity(category = "CALCULATOR", expression = "2 * 5", result = "10"))
+        dao.insert(CalculationEntity(category = "CALCULATOR", expression = "2 * 3", result = "6"))
         dao.insert(CalculationEntity(category = "CALCULATOR", expression = "2 * 10", result = "20"))
         dao.insert(CalculationEntity(category = "UNIT", expression = "2 m -> cm", result = "200 cm"))
 
