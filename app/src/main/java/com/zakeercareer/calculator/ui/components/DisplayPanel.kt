@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.zakeercareer.calculator.ui.theme.liquidGlass
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -223,18 +224,40 @@ fun DisplayPanel(
             .fillMaxWidth()
             .padding(horizontal = customWidthPaddingDp.dp)
             .heightIn(min = if (lockKeypadHeight) 80.dp else effectiveMinHeightDp.dp)
+            .then(
+                if (activeTheme.hasGlassmorphism) {
+                    Modifier.liquidGlass(
+                        shape = RoundedCornerShape(shapeRadius),
+                        blurRadius = 24f,
+                        tintTopColor = Color.White.copy(alpha = 0.22f),
+                        tintBottomColor = Color.White.copy(alpha = 0.08f),
+                        borderTopColor = Color.White.copy(alpha = 0.60f),
+                        borderBottomColor = Color.White.copy(alpha = 0.12f),
+                        borderWidth = 1.2.dp,
+                        enabled = true
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .testTag("display_panel_card"),
         shape = RoundedCornerShape(shapeRadius),
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
         ),
-        border = borderStroke,
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        border = if (activeTheme.hasGlassmorphism) null else borderStroke,
+        elevation = CardDefaults.cardElevation(defaultElevation = if (activeTheme.hasGlassmorphism) 0.dp else 6.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(brush = cardBackground)
+                .then(
+                    if (activeTheme.hasGlassmorphism) {
+                        Modifier
+                    } else {
+                        Modifier.background(brush = cardBackground)
+                    }
+                )
                 .padding(16.dp)
         ) {
             Column(

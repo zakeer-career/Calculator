@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import com.zakeercareer.calculator.ui.theme.liquidGlass
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -108,6 +109,7 @@ fun LiquidGlassBottomBar(
     }
 
     val containerAlpha = blurOpacity.coerceIn(0.0f, 1.0f)
+    val useGlassEffect = !isBarInvisible && (navBarStyle == "LIQUID_GLASS" || navBarStyle == "PILL" || navBarStyle == "MINIMAL_BUBBLE")
 
     Surface(
         modifier = modifier
@@ -123,10 +125,25 @@ fun LiquidGlassBottomBar(
                 vertical = 6.dp
             )
             .height(barHeight)
-            .clip(outerShape),
+            .then(
+                if (useGlassEffect) {
+                    Modifier.liquidGlass(
+                        shape = outerShape,
+                        blurRadius = 24f,
+                        tintTopColor = Color.White.copy(alpha = (0.18f * containerAlpha).coerceIn(0.08f, 0.35f)),
+                        tintBottomColor = Color.White.copy(alpha = (0.06f * containerAlpha).coerceIn(0.02f, 0.15f)),
+                        borderTopColor = Color.White.copy(alpha = 0.55f),
+                        borderBottomColor = Color.White.copy(alpha = 0.12f),
+                        borderWidth = 1.2.dp,
+                        enabled = true
+                    )
+                } else {
+                    Modifier.clip(outerShape)
+                }
+            ),
         shape = outerShape,
-        color = if (isBarInvisible) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = containerAlpha.coerceIn(0.2f, 0.95f)),
-        border = if (isBarInvisible) null else BorderStroke(
+        color = if (isBarInvisible || useGlassEffect) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = containerAlpha.coerceIn(0.2f, 0.95f)),
+        border = if (isBarInvisible || useGlassEffect) null else BorderStroke(
             1.2.dp,
             Brush.verticalGradient(
                 colors = listOf(
@@ -135,7 +152,7 @@ fun LiquidGlassBottomBar(
                 )
             )
         ),
-        shadowElevation = if (isBarInvisible) 0.dp else 8.dp
+        shadowElevation = if (isBarInvisible || useGlassEffect) 0.dp else 8.dp
     ) {
         BoxWithConstraints(
             modifier = Modifier

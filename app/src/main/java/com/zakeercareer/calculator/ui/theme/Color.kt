@@ -59,17 +59,20 @@ val OnTertiaryContainerDark = Color(0xFFEDDCFF)
 // ============================================================================
 // 2. GLASSMORPHISM / FROSTED GLASS PALETTE
 // ============================================================================
-val LiquidGlassBackground = Color(0xFF0A0E1A)
-val LiquidGlassSurface = Color(0x1AFFFFFF)
-val LiquidGlassSurfaceHigh = Color(0x28FFFFFF)
+val LiquidGlassBackground = Color(0xFF070A14)
+val LiquidGlassSurface = Color(0x22FFFFFF)
+val LiquidGlassSurfaceHigh = Color(0x33FFFFFF)
 val LiquidGlassPrimary = Color(0xFF0A84FF) // iOS Electric Blue
 val LiquidGlassOnPrimary = Color(0xFFFFFFFF)
-val LiquidGlassContainer = Color(0x330A84FF)
+val LiquidGlassContainer = Color(0x4D0A84FF)
 val LiquidGlassSecondary = Color(0xFF5E5CE6) // iOS Indigo Glass
-val LiquidGlassSecondaryContainer = Color(0x305E5CE6)
+val LiquidGlassSecondaryContainer = Color(0x405E5CE6)
 val LiquidGlassTertiary = Color(0xFFFF9F0A) // iOS Liquid Orange
-val LiquidGlassTertiaryContainer = Color(0x38FF9F0A)
-val LiquidGlassGlassBorder = Color(0x38FFFFFF) // Frosted glass sheen line
+val LiquidGlassTertiaryContainer = Color(0x45FF9F0A)
+val LiquidGlassGlassBorder = Color(0x4DFFFFFF) // Specular frosted glass sheen border
+val LiquidGlassNumberBtn = Color(0x2EFFFFFF) // Translucent refractive glass for numerals
+val LiquidGlassActionBtn = Color(0x40FF453A) // Translucent glass for AC / delete
+val LiquidGlassEqualsBtn = Color(0xFF0A84FF) // Electric blue frosted focal point
 
 // ============================================================================
 // 3. DARK OLED HIGH-CONTRAST & CYBERPUNK NEON PALETTE

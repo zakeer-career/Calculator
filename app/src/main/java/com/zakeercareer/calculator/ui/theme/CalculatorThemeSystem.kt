@@ -84,12 +84,12 @@ val LiquidGlassColorScheme = darkColorScheme(
     tertiaryContainer = LiquidGlassTertiaryContainer,
     onTertiaryContainer = Color(0xFFFFE8D6),
     error = Color(0xFFFF453A),
-    errorContainer = Color(0x3DFF453A),
+    errorContainer = LiquidGlassActionBtn,
     onErrorContainer = Color(0xFFFFD6D6),
     background = LiquidGlassBackground,
     surface = LiquidGlassBackground,
     surfaceContainer = LiquidGlassSurface,
-    surfaceContainerHigh = LiquidGlassSurfaceHigh,
+    surfaceContainerHigh = LiquidGlassNumberBtn,
     surfaceContainerHighest = Color(0x38FFFFFF),
     onSurface = Color(0xFFF5F7FA),
     outlineVariant = LiquidGlassGlassBorder
@@ -345,7 +345,11 @@ val AllCalculatorThemes = listOf(
         isDark = true,
         hasGlassmorphism = true,
         backgroundBrush = Brush.verticalGradient(
-            colors = listOf(Color(0xFF0D1326), Color(0xFF050810))
+            colors = listOf(
+                Color(0xFF141E38), // Rich deep navy twilight with refraction luminosity
+                Color(0xFF0C1322),
+                Color(0xFF050810)
+            )
         )
     ),
     CalculatorThemeStyle(

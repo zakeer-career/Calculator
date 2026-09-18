@@ -610,7 +610,7 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.82f)
+                    containerColor = if (CalculatorTheme.current.hasGlassmorphism) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.82f)
                 )
             )
         },

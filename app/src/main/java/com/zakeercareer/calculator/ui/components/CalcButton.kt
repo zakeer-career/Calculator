@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.zakeercareer.calculator.ui.theme.liquidGlass
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -246,6 +247,28 @@ fun CalcButton(
         Modifier
     }
 
+    val glassModifier = if (activeTheme.hasGlassmorphism) {
+        val (topTint, bottomTint) = when (type) {
+            CalcButtonType.NUMBER -> Color.White.copy(alpha = if (isPressed) 0.35f else 0.20f) to Color.White.copy(alpha = if (isPressed) 0.18f else 0.08f)
+            CalcButtonType.OPERATOR -> MaterialTheme.colorScheme.primary.copy(alpha = if (isPressed) 0.50f else 0.35f) to MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+            CalcButtonType.SCIENTIFIC -> MaterialTheme.colorScheme.tertiary.copy(alpha = if (isPressed) 0.45f else 0.30f) to MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+            CalcButtonType.ACTION -> MaterialTheme.colorScheme.error.copy(alpha = if (isPressed) 0.50f else 0.35f) to MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+            CalcButtonType.EQUALS -> MaterialTheme.colorScheme.primary.copy(alpha = if (isPressed) 0.95f else 0.85f) to MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+        }
+        Modifier.liquidGlass(
+            shape = shape,
+            blurRadius = 24f,
+            tintTopColor = topTint,
+            tintBottomColor = bottomTint,
+            borderTopColor = if (isPressed) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.60f),
+            borderBottomColor = Color.White.copy(alpha = 0.15f),
+            borderWidth = 1.2.dp,
+            enabled = true
+        )
+    } else {
+        Modifier
+    }
+
     Button(
         onClick = {
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -259,15 +282,16 @@ fun CalcButton(
                 scaleY = pressScale
             }
             .then(shadowModifier)
+            .then(glassModifier)
             .semantics { contentDescription = getAccessibleCalcLabel(text) }
             .testTag(testTag),
         shape = shape,
         colors = ButtonDefaults.buttonColors(
-            containerColor = containerColor,
+            containerColor = if (activeTheme.hasGlassmorphism) Color.Transparent else containerColor,
             contentColor = contentColor
         ),
-        elevation = elevation,
-        border = borderStroke,
+        elevation = if (activeTheme.hasGlassmorphism) ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp) else elevation,
+        border = if (activeTheme.hasGlassmorphism) null else borderStroke,
         contentPadding = PaddingValues(0.dp)
     ) {
         Text(
