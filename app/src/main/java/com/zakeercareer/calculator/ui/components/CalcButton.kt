@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -172,6 +173,19 @@ fun CalcButton(
         CalcButtonType.EQUALS -> MaterialTheme.colorScheme.onPrimary
     }
 
+    // Shape customization based on active theme or override
+    val shapeStyle = btnShape ?: activeTheme.buttonShapeStyle
+    val shape = remember(shapeStyle, customCornerRadiusDp, activeTheme) {
+        when {
+            shapeStyle == "PILL" || shapeStyle == "CIRCLE" -> CircleShape
+            shapeStyle == "SQUARE" -> RoundedCornerShape(8.dp)
+            shapeStyle == "BEVELED" -> RoundedCornerShape(14.dp)
+            shapeStyle == "NEUMORPHIC" || activeTheme.hasGlassmorphism -> RoundedCornerShape(20.dp)
+            customCornerRadiusDp != null && customCornerRadiusDp >= 0 -> RoundedCornerShape(customCornerRadiusDp.dp)
+            else -> RoundedCornerShape(activeTheme.keypadBtnCornerRadiusDp.dp)
+        }
+    }
+
     // Border & Bevel Styling
     val borderStroke = when {
         activeTheme.hasNeumorphicStyle -> BorderStroke(
@@ -200,17 +214,6 @@ fun CalcButton(
             MaterialTheme.colorScheme.error.copy(alpha = 0.35f)
         )
         else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
-    }
-
-    // Shape customization based on active theme or override
-    val shapeStyle = btnShape ?: activeTheme.buttonShapeStyle
-    val shape = when {
-        shapeStyle == "PILL" || shapeStyle == "CIRCLE" -> CircleShape
-        shapeStyle == "SQUARE" -> RoundedCornerShape(8.dp)
-        shapeStyle == "BEVELED" -> RoundedCornerShape(14.dp)
-        shapeStyle == "NEUMORPHIC" || activeTheme.hasGlassmorphism -> RoundedCornerShape(20.dp)
-        customCornerRadiusDp != null && customCornerRadiusDp >= 0 -> RoundedCornerShape(customCornerRadiusDp.dp)
-        else -> RoundedCornerShape(activeTheme.keypadBtnCornerRadiusDp.dp)
     }
 
     // Font Sizing
@@ -249,7 +252,10 @@ fun CalcButton(
         interactionSource = interactionSource,
         modifier = modifier
             .fillMaxSize()
-            .scale(pressScale)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .then(shadowModifier)
             .semantics { contentDescription = getAccessibleCalcLabel(text) }
             .testTag(testTag),

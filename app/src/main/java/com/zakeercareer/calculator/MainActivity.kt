@@ -252,7 +252,6 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
     val biometricLockEnabled by viewModel.biometricLockEnabled.collectAsStateWithLifecycle()
     val tabOrder by viewModel.tabOrder.collectAsStateWithLifecycle()
     val incognitoMode by viewModel.incognitoMode.collectAsStateWithLifecycle()
-    val expression by viewModel.expression.collectAsStateWithLifecycle()
 
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
 
@@ -266,22 +265,6 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
             }
         }
     }
-
-    val currencyAmount by viewModel.currencyAmount.collectAsStateWithLifecycle()
-    val fromCurrency by viewModel.fromCurrency.collectAsStateWithLifecycle()
-    val toCurrency by viewModel.toCurrency.collectAsStateWithLifecycle()
-    val exchangeState by viewModel.exchangeState.collectAsStateWithLifecycle()
-    val convertedCurrency by viewModel.convertedCurrency.collectAsStateWithLifecycle()
-
-    val unitCategory by viewModel.unitCategory.collectAsStateWithLifecycle()
-    val unitInputValue by viewModel.unitInputValue.collectAsStateWithLifecycle()
-    val unitFrom by viewModel.unitFrom.collectAsStateWithLifecycle()
-    val unitTo by viewModel.unitTo.collectAsStateWithLifecycle()
-    val unitResultValue by viewModel.unitResultValue.collectAsStateWithLifecycle()
-
-    val historyList by viewModel.historyList.collectAsStateWithLifecycle()
-    val filterCategory by viewModel.filterCategory.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
     val showBottomBar by viewModel.showBottomBar.collectAsStateWithLifecycle()
     val pillNavStyle by viewModel.pillNavStyle.collectAsStateWithLifecycle()
@@ -320,15 +303,18 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
         if (selectedTab != 0) {
             val calcIdx = currentNavItems.indexOf(NavItem.Calculator)
             selectedTab = if (calcIdx >= 0) calcIdx else 0
-        } else if (expression.isNotEmpty() && expression != "0") {
-            viewModel.onClearAll()
         } else {
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastBackPressTime < 2000) {
-                activity?.finish()
+            val currentExpr = viewModel.expression.value
+            if (currentExpr.isNotEmpty() && currentExpr != "0") {
+                viewModel.onClearAll()
             } else {
-                lastBackPressTime = currentTime
-                Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastBackPressTime < 2000) {
+                    activity?.finish()
+                } else {
+                    lastBackPressTime = currentTime
+                    Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -621,34 +607,53 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                 NavItem.Scientific -> ScientificCalculatorScreen(
                     viewModel = viewModel
                 )
-                NavItem.Currency -> CurrencyConverterScreen(
-                    viewModel = viewModel,
-                    amount = currencyAmount,
-                    fromCurrency = fromCurrency,
-                    toCurrency = toCurrency,
-                    exchangeState = exchangeState,
-                    convertedValue = convertedCurrency
-                )
-                NavItem.Unit -> UnitConverterScreen(
-                    viewModel = viewModel,
-                    selectedCategory = unitCategory,
-                    inputValue = unitInputValue,
-                    fromUnit = unitFrom,
-                    toUnit = unitTo,
-                    resultValue = unitResultValue
-                )
+                NavItem.Currency -> {
+                    val currencyAmount by viewModel.currencyAmount.collectAsStateWithLifecycle()
+                    val fromCurrency by viewModel.fromCurrency.collectAsStateWithLifecycle()
+                    val toCurrency by viewModel.toCurrency.collectAsStateWithLifecycle()
+                    val exchangeState by viewModel.exchangeState.collectAsStateWithLifecycle()
+                    val convertedCurrency by viewModel.convertedCurrency.collectAsStateWithLifecycle()
+                    CurrencyConverterScreen(
+                        viewModel = viewModel,
+                        amount = currencyAmount,
+                        fromCurrency = fromCurrency,
+                        toCurrency = toCurrency,
+                        exchangeState = exchangeState,
+                        convertedValue = convertedCurrency
+                    )
+                }
+                NavItem.Unit -> {
+                    val unitCategory by viewModel.unitCategory.collectAsStateWithLifecycle()
+                    val unitInputValue by viewModel.unitInputValue.collectAsStateWithLifecycle()
+                    val unitFrom by viewModel.unitFrom.collectAsStateWithLifecycle()
+                    val unitTo by viewModel.unitTo.collectAsStateWithLifecycle()
+                    val unitResultValue by viewModel.unitResultValue.collectAsStateWithLifecycle()
+                    UnitConverterScreen(
+                        viewModel = viewModel,
+                        selectedCategory = unitCategory,
+                        inputValue = unitInputValue,
+                        fromUnit = unitFrom,
+                        toUnit = unitTo,
+                        resultValue = unitResultValue
+                    )
+                }
                 NavItem.Matrix -> MatrixScreen(viewModel = viewModel)
-                NavItem.History -> HistoryScreen(
-                    viewModel = viewModel,
-                    historyList = historyList,
-                    selectedCategoryFilter = filterCategory,
-                    searchQuery = searchQuery,
-                    onInsertToCalc = { result ->
-                        viewModel.onAppendInput(result)
-                        val calcIdx = currentNavItems.indexOf(NavItem.Calculator)
-                        if (calcIdx >= 0) selectedTab = calcIdx
-                    }
-                )
+                NavItem.History -> {
+                    val historyList by viewModel.historyList.collectAsStateWithLifecycle()
+                    val filterCategory by viewModel.filterCategory.collectAsStateWithLifecycle()
+                    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+                    HistoryScreen(
+                        viewModel = viewModel,
+                        historyList = historyList,
+                        selectedCategoryFilter = filterCategory,
+                        searchQuery = searchQuery,
+                        onInsertToCalc = { result ->
+                            viewModel.onAppendInput(result)
+                            val calcIdx = currentNavItems.indexOf(NavItem.Calculator)
+                            if (calcIdx >= 0) selectedTab = calcIdx
+                        }
+                    )
+                }
                 NavItem.Settings -> SettingsScreen(viewModel = viewModel)
             }
         }

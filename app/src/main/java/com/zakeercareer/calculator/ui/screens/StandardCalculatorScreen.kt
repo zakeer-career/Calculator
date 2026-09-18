@@ -257,78 +257,15 @@ fun StandardCalculatorScreen(
                 }
 
                 // Right Column: Standard Keypad Grid filling full height
-                Column(
-                    modifier = Modifier
-                        .weight(1.2f)
-                        .fillMaxHeight()
-                        .padding(gridSpacing),
-                    verticalArrangement = Arrangement.spacedBy(gridSpacing)
-                ) {
-                    // Row 1: AC, (, ), ÷
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("AC", CalcButtonType.ACTION, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onClearAll() }
-                        CalcButton("(", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("(") }
-                        CalcButton(")", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput(")") }
-                        CalcButton("÷", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("÷") }
-                    }
-
-                    // Row 2: 7, 8, 9, ×
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("7", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("7") }
-                        CalcButton("8", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("8") }
-                        CalcButton("9", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("9") }
-                        CalcButton("×", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("×") }
-                    }
-
-                    // Row 3: 4, 5, 6, −
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("4", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("4") }
-                        CalcButton("5", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("5") }
-                        CalcButton("6", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("6") }
-                        CalcButton("−", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("−") }
-                    }
-
-                    // Row 4: 1, 2, 3, +
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("1", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("1") }
-                        CalcButton("2", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("2") }
-                        CalcButton("3", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("3") }
-                        CalcButton("+", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("+") }
-                    }
-
-                    // Row 5: 0, %, ., =
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("0", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("0") }
-                        CalcButton("%", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput("%") }
-                        CalcButton(".", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onAppendInput(".") }
-                        CalcButton("=", CalcButtonType.EQUALS, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { viewModel.onCalculate() }
-                    }
-                }
+                StandardLandscapeKeypad(
+                    gridSpacing = gridSpacing,
+                    compactView = compactView,
+                    btnShape = btnShape,
+                    onClearAll = { viewModel.onClearAll() },
+                    onAppendInput = { viewModel.onAppendInput(it) },
+                    onCalculate = { viewModel.onCalculate() },
+                    modifier = Modifier.weight(1.2f)
+                )
             }
         } else {
             // --- PORTRAIT / HANDHELD LAYOUT ---
@@ -447,73 +384,20 @@ fun StandardCalculatorScreen(
             }
 
                 // Standard Keypad Column - auto-resizing via weight & horizontal padding
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(keypadWeight)
-                        .padding(horizontal = keypadWidthPaddingDp.dp, vertical = gridSpacing),
-                    verticalArrangement = Arrangement.spacedBy(gridSpacing)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("AC", CalcButtonType.ACTION, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onClearAll() }
-                        CalcButton("⌫", CalcButtonType.ACTION, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onDeleteChar() }
-                        CalcButton("(", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("(") }
-                        CalcButton("÷", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("÷") }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("7", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("7") }
-                        CalcButton("8", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("8") }
-                        CalcButton("9", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("9") }
-                        CalcButton("×", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("×") }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("4", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("4") }
-                        CalcButton("5", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("5") }
-                        CalcButton("6", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("6") }
-                        CalcButton("−", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("−") }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("1", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("1") }
-                        CalcButton("2", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("2") }
-                        CalcButton("3", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("3") }
-                        CalcButton("+", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("+") }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(gridSpacing)
-                    ) {
-                        CalcButton("0", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("0") }
-                        CalcButton("%", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput("%") }
-                        CalcButton(".", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onAppendInput(".") }
-                        CalcButton("=", CalcButtonType.EQUALS, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { viewModel.onCalculate() }
-                    }
-                }
+                StandardPortraitKeypad(
+                    gridSpacing = gridSpacing,
+                    keypadWeight = keypadWeight,
+                    keypadWidthPaddingDp = keypadWidthPaddingDp,
+                    keypadBtnCornerRadiusDp = keypadBtnCornerRadiusDp,
+                    effectiveBtnFontSizeSp = effectiveBtnFontSizeSp,
+                    compactView = compactView,
+                    btnShape = btnShape,
+                    onClearAll = { viewModel.onClearAll() },
+                    onDeleteChar = { viewModel.onDeleteChar() },
+                    onAppendInput = { viewModel.onAppendInput(it) },
+                    onCalculate = { viewModel.onCalculate() },
+                    modifier = Modifier.weight(keypadWeight)
+                )
             }
         }
     }
@@ -970,5 +854,158 @@ fun StandardCalculatorScreen(
             onApplyResult = { res -> viewModel.applyResult(res) },
             onApplyEquation = { eq -> viewModel.applyEquation(eq) }
         )
+    }
+}
+
+@Composable
+private fun StandardLandscapeKeypad(
+    gridSpacing: androidx.compose.ui.unit.Dp,
+    compactView: Boolean,
+    btnShape: String,
+    onClearAll: () -> Unit,
+    onAppendInput: (String) -> Unit,
+    onCalculate: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .padding(gridSpacing),
+        verticalArrangement = Arrangement.spacedBy(gridSpacing)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("AC", CalcButtonType.ACTION, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onClearAll() }
+            CalcButton("(", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("(") }
+            CalcButton(")", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput(")") }
+            CalcButton("÷", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("÷") }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("7", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("7") }
+            CalcButton("8", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("8") }
+            CalcButton("9", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("9") }
+            CalcButton("×", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("×") }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("4", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("4") }
+            CalcButton("5", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("5") }
+            CalcButton("6", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("6") }
+            CalcButton("−", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("−") }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("1", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("1") }
+            CalcButton("2", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("2") }
+            CalcButton("3", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("3") }
+            CalcButton("+", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("+") }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("0", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("0") }
+            CalcButton("%", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput("%") }
+            CalcButton(".", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onAppendInput(".") }
+            CalcButton("=", CalcButtonType.EQUALS, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape) { onCalculate() }
+        }
+    }
+}
+
+@Composable
+private fun StandardPortraitKeypad(
+    gridSpacing: androidx.compose.ui.unit.Dp,
+    keypadWeight: Float,
+    keypadWidthPaddingDp: Int,
+    keypadBtnCornerRadiusDp: Int,
+    effectiveBtnFontSizeSp: Int,
+    compactView: Boolean,
+    btnShape: String,
+    onClearAll: () -> Unit,
+    onDeleteChar: () -> Unit,
+    onAppendInput: (String) -> Unit,
+    onCalculate: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = keypadWidthPaddingDp.dp, vertical = gridSpacing),
+        verticalArrangement = Arrangement.spacedBy(gridSpacing)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("AC", CalcButtonType.ACTION, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onClearAll() }
+            CalcButton("⌫", CalcButtonType.ACTION, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onDeleteChar() }
+            CalcButton("(", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("(") }
+            CalcButton("÷", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("÷") }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("7", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("7") }
+            CalcButton("8", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("8") }
+            CalcButton("9", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("9") }
+            CalcButton("×", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("×") }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("4", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("4") }
+            CalcButton("5", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("5") }
+            CalcButton("6", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("6") }
+            CalcButton("−", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("−") }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("1", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("1") }
+            CalcButton("2", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("2") }
+            CalcButton("3", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("3") }
+            CalcButton("+", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("+") }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing)
+        ) {
+            CalcButton("0", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("0") }
+            CalcButton("%", CalcButtonType.OPERATOR, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput("%") }
+            CalcButton(".", CalcButtonType.NUMBER, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onAppendInput(".") }
+            CalcButton("=", CalcButtonType.EQUALS, Modifier.weight(1f), isCompact = compactView, btnShape = btnShape, customCornerRadiusDp = keypadBtnCornerRadiusDp, customFontSizeSp = effectiveBtnFontSizeSp) { onCalculate() }
+        }
     }
 }
