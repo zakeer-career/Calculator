@@ -17,22 +17,16 @@ abstract class AppDatabase : RoomDatabase() {
 
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                try {
-                    db.execSQL("ALTER TABLE calculation_history ADD COLUMN details TEXT DEFAULT NULL")
-                } catch (ignored: Exception) {}
-                try {
-                    db.execSQL("ALTER TABLE calculation_history ADD COLUMN isTrash INTEGER NOT NULL DEFAULT 0")
-                } catch (ignored: Exception) {}
+                db.execSQL("ALTER TABLE calculation_history ADD COLUMN details TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE calculation_history ADD COLUMN isTrash INTEGER NOT NULL DEFAULT 0")
             }
         }
 
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                try {
-                    db.execSQL("CREATE INDEX IF NOT EXISTS index_calculation_history_isTrash_timestamp ON calculation_history (isTrash, timestamp)")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS index_calculation_history_isTrash_category_timestamp ON calculation_history (isTrash, category, timestamp)")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS index_calculation_history_isTrash_isFavorite_timestamp ON calculation_history (isTrash, isFavorite, timestamp)")
-                } catch (ignored: Exception) {}
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_calculation_history_isTrash_timestamp ON calculation_history (isTrash, timestamp)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_calculation_history_isTrash_category_timestamp ON calculation_history (isTrash, category, timestamp)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_calculation_history_isTrash_isFavorite_timestamp ON calculation_history (isTrash, isFavorite, timestamp)")
             }
         }
 
@@ -44,7 +38,6 @@ abstract class AppDatabase : RoomDatabase() {
                     "advanced_calculator_database"
                 )
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance

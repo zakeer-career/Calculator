@@ -140,18 +140,20 @@ fun FuturisticCalcCurrencyBar(
     var showFromPicker by remember { mutableStateOf(false) }
     var showToPicker by remember { mutableStateOf(false) }
 
-    // Parse active value from preview result or expression
+    // Parse active value from preview result or expression - strictly nullable
     val numericValue = remember(previewResult, expression) {
         val target = if (previewResult.isNotBlank() && previewResult != "Error" && previewResult != "...") {
             previewResult.replace(",", "")
         } else {
             expression.replace(",", "")
         }
-        target.toDoubleOrNull() ?: 1.0
+        target.toDoubleOrNull()
     }
 
     val convertedVal = remember(numericValue, fromCurrency, toCurrency, exchangeState.rates) {
-        CurrencyRepository.convertCurrency(numericValue, fromCurrency.code, toCurrency.code, exchangeState.rates)
+        numericValue?.let {
+            CurrencyRepository.convertCurrency(it, fromCurrency.code, toCurrency.code, exchangeState.rates)
+        }
     }
 
     val baseRateVal = remember(fromCurrency, toCurrency, exchangeState.rates) {
@@ -159,7 +161,9 @@ fun FuturisticCalcCurrencyBar(
     }
 
     val formattedConverted = remember(convertedVal, decimals) {
-        if (decimals == -1) {
+        if (convertedVal == null) {
+            null
+        } else if (decimals == -1) {
             MathEvaluator.formatNumber(convertedVal)
         } else if (decimals == 0) {
             String.format(java.util.Locale.US, "%.0f", convertedVal)
@@ -280,24 +284,27 @@ fun FuturisticCalcCurrencyBar(
             // Middle: Live Converted Rate Pill / Mode Status Pill
             if (isToggleActive) {
                 // ACTIVE CONVERSION PILL
+                val safeConvertedText = formattedConverted
                 Surface(
                     onClick = {
-                        when (toggleEnabledAction) {
-                            "AUTO_COPY" -> {
-                                clipboardManager.setText(AnnotatedString(formattedConverted))
-                                Toast.makeText(context, "Copied $formattedConverted ${toCurrency.code} to clipboard", Toast.LENGTH_SHORT).show()
-                            }
-                            "SWAP_CURRENCIES" -> {
-                                onSwapCurrencies()
-                            }
-                            "INSERT_TO_CALC" -> {
-                                onInsertValueToCalc(formattedConverted)
-                            }
-                            "LIVE_CONVERT" -> {
-                                onInsertValueToCalc(formattedConverted)
-                            }
-                            else -> {
-                                onInsertValueToCalc(formattedConverted)
+                        if (safeConvertedText != null) {
+                            when (toggleEnabledAction) {
+                                "AUTO_COPY" -> {
+                                    clipboardManager.setText(AnnotatedString(safeConvertedText))
+                                    Toast.makeText(context, "Copied $safeConvertedText ${toCurrency.code} to clipboard", Toast.LENGTH_SHORT).show()
+                                }
+                                "SWAP_CURRENCIES" -> {
+                                    onSwapCurrencies()
+                                }
+                                "INSERT_TO_CALC" -> {
+                                    onInsertValueToCalc(safeConvertedText)
+                                }
+                                "LIVE_CONVERT" -> {
+                                    onInsertValueToCalc(safeConvertedText)
+                                }
+                                else -> {
+                                    onInsertValueToCalc(safeConvertedText)
+                                }
                             }
                         }
                     },
@@ -318,12 +325,18 @@ fun FuturisticCalcCurrencyBar(
                             modifier = Modifier
                                 .size(7.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF00E676))
+                                .background(if (safeConvertedText != null) Color(0xFF00E676) else MaterialTheme.colorScheme.outlineVariant)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
 
+                        val displayPillText = if (safeConvertedText != null) {
+                            "$safeConvertedText ${toCurrency.code}"
+                        } else {
+                            "1 = $formattedBaseRate"
+                        }
+
                         AnimatedContent(
-                            targetState = "$formattedConverted ${toCurrency.code}",
+                            targetState = displayPillText,
                             transitionSpec = { fadeIn() togetherWith fadeOut() },
                             label = "converted_curr_anim"
                         ) { text ->
@@ -332,7 +345,7 @@ fun FuturisticCalcCurrencyBar(
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontFamily = FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = if (safeConvertedText != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

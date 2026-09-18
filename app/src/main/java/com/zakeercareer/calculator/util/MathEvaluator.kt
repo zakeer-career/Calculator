@@ -4,9 +4,9 @@ import java.util.Locale
 import kotlin.math.*
 
 object MathEvaluator {
-    private val addSubPctRegex = Regex("((?:\\d+(?:\\.\\d+)?|\\([^)]+\\)))\\s*([+\\-])\\s*(\\d+(?:\\.\\d+)?)\\s*%")
-    private val mulDivPctRegex = Regex("((?:\\d+(?:\\.\\d+)?|\\([^)]+\\)))\\s*([*/])\\s*(\\d+(?:\\.\\d+)?)\\s*%")
-    private val standalonePctRegex = Regex("(\\d+(?:\\.\\d+)?)\\s*%")
+    private val addSubPctRegex = Regex("((?:\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?|\\([^)]+\\)))\\s*([+\\-])\\s*(\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\s*%")
+    private val mulDivPctRegex = Regex("((?:\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?|\\([^)]+\\)))\\s*([*/])\\s*(\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\s*%")
+    private val standalonePctRegex = Regex("(\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\s*%")
     private val implicitRegexes = listOf(
         Regex("(?<=[0-9])e(?![0-9+\\-])") to "*e",
         Regex("(\\)|pi|e)(e|pi|\\(|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|log|ln|sqrt|abs)") to "$1*$2",

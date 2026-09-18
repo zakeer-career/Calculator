@@ -232,5 +232,18 @@ class ExampleUnitTest {
         assertTrue(resE5 is EvaluationResult.Success)
         assertEquals(5.0 * Math.E, (resE5 as EvaluationResult.Success).rawValue, 1e-9)
     }
+
+    @Test
+    fun testScientificNotationWithPercentage() {
+        // 1e3% = 1000 / 100 = 10
+        val resPct = MathEvaluator.evaluateStrict("1e3%")
+        assertTrue(resPct is EvaluationResult.Success)
+        assertEquals(10.0, (resPct as EvaluationResult.Success).rawValue, 1e-9)
+
+        // 100 + 1e2% = 100 + (100 * 100 / 100) = 200
+        val resAddPct = MathEvaluator.evaluateStrict("100 + 1e2%")
+        assertTrue(resAddPct is EvaluationResult.Success)
+        assertEquals(200.0, (resAddPct as EvaluationResult.Success).rawValue, 1e-9)
+    }
 }
 

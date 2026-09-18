@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class CalculatorViewModel(application: Application) : AndroidViewModel(application) {
     private var previewJob: Job? = null
+    private val previewGeneration = java.util.concurrent.atomic.AtomicLong(0L)
 
     private val prefs: SharedPreferences = application.getSharedPreferences("calc_settings", Context.MODE_PRIVATE)
     private val dao = AppDatabase.getDatabase(application).calculationDao()
@@ -344,21 +345,32 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
     val enabledTabs: StateFlow<Set<String>> = _enabledTabs.asStateFlow()
 
     private fun getSavedTabOrder(): List<String> {
+        val validSet = defaultTabList.toSet()
         val saved = prefs.getString("tab_order", null) ?: return defaultTabList
-        val list = saved.split(",").filter { it.isNotBlank() }.toMutableList()
+        val list = saved.split(",")
+            .map { it.trim() }
+            .filter { it.isNotBlank() && validSet.contains(it) }
+            .distinct()
+            .toMutableList()
+
         defaultTabList.forEach { tab ->
             if (!list.contains(tab)) {
-                val idx = defaultTabList.indexOf(tab)
-                if (idx <= list.size) list.add(idx, tab) else list.add(tab)
+                list.add(tab)
             }
         }
         return list
     }
 
     private fun getSavedEnabledTabs(): Set<String> {
+        val validSet = defaultTabList.toSet()
         val saved = prefs.getStringSet("enabled_tabs", null)
         if (saved.isNullOrEmpty()) return defaultTabList.toSet()
-        return saved.toSet()
+        val filtered = saved.filter { validSet.contains(it) }.toMutableSet()
+        if (filtered.isEmpty()) {
+            filtered.addAll(defaultTabList)
+        }
+        filtered.add("CALCULATOR") // Always ensure primary calculator remains enabled
+        return filtered
     }
 
     // --- STANDARD / SCIENTIFIC CALCULATOR STATE ---
@@ -663,14 +675,19 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
             _previewResult.value = "0"
             return
         }
+        val gen = previewGeneration.incrementAndGet()
         previewJob?.cancel()
         previewJob = viewModelScope.launch(Dispatchers.Default) {
             delay(50)
+            if (gen != previewGeneration.get()) return@launch
             val res = MathEvaluator.evaluatePartial(expr, _isDegreeMode.value, _decimalPrecision.value, _numberFormatStyle.value)
+            if (gen != previewGeneration.get()) return@launch
             withContext(Dispatchers.Main) {
-                _previewResult.value = when (res) {
-                    is EvaluationResult.Success -> res.formattedResult
-                    is EvaluationResult.Error -> "..."
+                if (gen == previewGeneration.get()) {
+                    _previewResult.value = when (res) {
+                        is EvaluationResult.Success -> res.formattedResult
+                        is EvaluationResult.Error -> "..."
+                    }
                 }
             }
         }
