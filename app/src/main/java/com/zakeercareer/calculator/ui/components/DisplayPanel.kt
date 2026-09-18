@@ -74,6 +74,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zakeercareer.calculator.ui.theme.CalculatorTheme
+import com.zakeercareer.calculator.ui.theme.JetBrainsMonoFamily
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.icons.automirrored.filled.Backspace
@@ -443,7 +444,7 @@ fun DisplayPanel(
                                     textStyle = TextStyle(
                                         fontSize = mainTextSize,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFamily = JetBrainsMonoFamily,
                                         color = mainTextColor,
                                         textAlign = textAlignment
                                     ),
@@ -475,7 +476,7 @@ fun DisplayPanel(
                                     textStyle = TextStyle(
                                         fontSize = mainTextSize,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFamily = JetBrainsMonoFamily,
                                         color = mainTextColor,
                                         textAlign = textAlignment
                                     ),
@@ -500,7 +501,7 @@ fun DisplayPanel(
                                 textStyle = TextStyle(
                                     fontSize = mainTextSize,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontFamily = FontFamily.Monospace,
+                                    fontFamily = JetBrainsMonoFamily,
                                     color = mainTextColor,
                                     textAlign = textAlignment
                                 ),
@@ -524,7 +525,7 @@ fun DisplayPanel(
                                                 text = "0",
                                                 fontSize = mainTextSize,
                                                 fontWeight = FontWeight.SemiBold,
-                                                fontFamily = FontFamily.Monospace,
+                                                fontFamily = JetBrainsMonoFamily,
                                                 color = mainTextColor.copy(alpha = 0.4f),
                                                 textAlign = textAlignment,
                                                 modifier = Modifier.fillMaxWidth()
@@ -579,7 +580,7 @@ fun DisplayPanel(
                                     text = animatedResult,
                                     fontSize = previewTextSize,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace,
+                                    fontFamily = JetBrainsMonoFamily,
                                     color = resultTextColor,
                                     textAlign = textAlignment,
                                     modifier = Modifier.testTag("preview_result_text")
@@ -590,7 +591,7 @@ fun DisplayPanel(
                                 text = displayResult,
                                 fontSize = previewTextSize,
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = JetBrainsMonoFamily,
                                 color = resultTextColor,
                                 textAlign = textAlignment,
                                 modifier = Modifier.testTag("preview_result_text")

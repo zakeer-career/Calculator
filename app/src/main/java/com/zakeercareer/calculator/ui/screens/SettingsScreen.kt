@@ -21,6 +21,7 @@ import android.widget.Toast
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -1279,7 +1280,7 @@ fun SettingsScreen(viewModel: CalculatorViewModel) {
 
                         // Calculation & Features Guide Item
                         SettingsItemRow(
-                            icon = Icons.Default.HelpOutline,
+                            icon = Icons.AutoMirrored.Filled.HelpOutline,
                             title = "Calculation & Features Guide",
                             subtitle = "Learn percentage syntax, scientific functions & modes",
                             showChevron = true

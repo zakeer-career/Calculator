@@ -20,11 +20,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Input
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Input
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -422,7 +422,7 @@ fun HistoryItemCard(
                 )
                 "INSERT" -> Quadruple(
                     MaterialTheme.colorScheme.secondaryContainer,
-                    Icons.Default.Input,
+                    Icons.AutoMirrored.Filled.Input,
                     "Insert to Calc",
                     MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -569,7 +569,7 @@ fun HistoryItemCard(
                     }
                     if (entry.category == "STANDARD") {
                         IconButton(onClick = onInsertToCalc) {
-                            Icon(Icons.Default.Input, contentDescription = "Insert into Calculator")
+                            Icon(Icons.AutoMirrored.Filled.Input, contentDescription = "Insert into Calculator")
                         }
                     }
                     IconButton(onClick = onDelete) {

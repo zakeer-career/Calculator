@@ -26,12 +26,13 @@ import com.zakeercareer.calculator.ui.components.LiquidGlassBottomBar
 import com.zakeercareer.calculator.ui.components.NavigationTabItem
 import com.zakeercareer.calculator.ui.theme.CalculatorTheme
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Functions
 import androidx.compose.material.icons.filled.GridOn
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
@@ -87,7 +88,6 @@ import com.zakeercareer.calculator.ui.screens.UnitConverterScreen
 import com.zakeercareer.calculator.ui.theme.AdvancedCalculatorTheme
 import com.zakeercareer.calculator.ui.viewmodel.CalculatorViewModel
 
-import androidx.compose.material.icons.filled.MenuBook
 import com.zakeercareer.calculator.ui.components.CalculationGuideSheet
 import com.zakeercareer.calculator.ui.components.ThemeSelectionBottomSheet
 
@@ -416,27 +416,71 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
     if (showHelpDialog) {
         AlertDialog(
             onDismissRequest = { showHelpDialog = false },
-            title = { Text("About & Help") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_calculator_vector_logo),
+                        contentDescription = "Calculator Luxury Emblem",
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
+            },
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "Developer: zakeer-career",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        "Calculator",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "To install this app directly on your Android phone without ADB or a PC:\n\n" +
-                        "1. Tap the 'Install' or 'Download APK' button at the top right of the AI Studio window.\n" +
-                        "2. Open your Android phone's Downloads folder or browser downloads.\n" +
+                        "Engineered Precision • World-Class UI/UX",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                "Architect & Developer",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                "zakeercareer",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Text(
+                        "Installation & Sideload Guide:\n\n" +
+                        "1. Tap 'Install' or 'Download APK' at the top-right in AI Studio.\n" +
+                        "2. Open your Android phone's Downloads directory.\n" +
                         "3. Tap the downloaded .apk file.\n" +
-                        "4. If prompted, allow 'Install from unknown sources' for your browser or file manager."
+                        "4. Allow 'Install from unknown sources' if prompted.",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showHelpDialog = false }) {
-                    Text("Got it")
+                    Text("Got it", fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -451,17 +495,17 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable { showTopScreenMenu = true }
                                 .padding(vertical = 4.dp, horizontal = 6.dp)
                         ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_calculator_vector_logo),
                                 contentDescription = "Vector Logo",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(26.dp)
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(28.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
                                     text = when (currentScreen) {
@@ -473,6 +517,7 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                                         NavItem.History -> "Calculation History"
                                         NavItem.Settings -> "App Settings & Privacy"
                                     },
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 if (incognitoMode) {
@@ -535,7 +580,7 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Calculation Guide") },
-                                leadingIcon = { Icon(Icons.Default.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showCalcGuideSheet = true
@@ -554,7 +599,7 @@ fun MainCalculatorApp(viewModel: CalculatorViewModel = viewModel()) {
                             )
                             DropdownMenuItem(
                                 text = { Text("Help & About") },
-                                leadingIcon = { Icon(Icons.Default.HelpOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showHelpDialog = true

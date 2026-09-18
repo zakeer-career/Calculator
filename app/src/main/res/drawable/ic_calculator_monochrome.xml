@@ -1,10 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Outer Squircle Chassis -->
     <path
         android:fillColor="#000000"
-        android:pathData="M38,26 h32 a6,6 0 0,1 6,6 v44 a6,6 0 0,1 -6,6 h-32 a6,6 0 0,1 -6,-6 v-44 a6,6 0 0,1 6,-6 z M42,32 v10 h24 v-10 z M42,48 h6 v6 h-6 z M51,48 h6 v6 h-6 z M60,48 h6 v6 h-6 z M42,57 h6 v6 h-6 z M51,57 h6 v6 h-6 z M60,57 h6 v6 h-6 z M42,66 h6 v6 h-6 z M51,66 h6 v6 h-6 z M60,66 h6 v12 h-6 z M42,75 h15 v3 h-15 z" />
+        android:pathData="M54,16 C76,16 92,20 92,42 L92,66 C92,88 76,92 54,92 C32,92 16,88 16,66 L16,42 C16,20 32,16 54,16 Z" />
+
+    <!-- Isometric Prism Outline -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:pathData="M54,26 L76,38 L54,50 L32,38 Z M32,38 L54,50 L54,74 L32,62 Z M54,50 L76,38 L76,62 L54,74 Z" />
+
+    <!-- Plus Glyph -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52,33 L56,33 L56,36 L59,36 L59,40 L56,40 L56,43 L52,43 L52,40 L49,40 L49,36 L52,36 Z" />
+
+    <!-- Equals Bars -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,80 L70,80 C71.1,80 72,80.9 72,82 L72,82 C72,83.1 71.1,84 70,84 L38,84 C36.9,84 36,83.1 36,82 L36,82 C36,80.9 36.9,80 38,80 Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,87 L64,87 C64.8,87 65.5,87.7 65.5,88.5 C65.5,89.3 64.8,90 64,90 L44,90 C43.2,90 42.5,89.3 42.5,88.5 C42.5,87.7 43.2,87 44,87 Z" />
 </vector>

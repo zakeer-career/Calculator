@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zakeercareer.calculator.ui.theme.CalcTheme
 import com.zakeercareer.calculator.ui.theme.CalculatorTheme
+import com.zakeercareer.calculator.ui.theme.JetBrainsMonoFamily
+import com.zakeercareer.calculator.ui.theme.PlusJakartaSansFamily
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 
@@ -271,6 +273,10 @@ fun CalcButton(
         Text(
             text = text,
             fontSize = fontSize,
+            fontFamily = when (type) {
+                CalcButtonType.NUMBER, CalcButtonType.OPERATOR, CalcButtonType.EQUALS -> JetBrainsMonoFamily
+                else -> PlusJakartaSansFamily
+            },
             fontWeight = when (type) {
                 CalcButtonType.EQUALS, CalcButtonType.OPERATOR -> FontWeight.Bold
                 CalcButtonType.ACTION -> FontWeight.SemiBold

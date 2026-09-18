@@ -15,11 +15,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Functions
 import androidx.compose.material.icons.filled.GridOn
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Percent
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material3.Card
@@ -85,7 +85,7 @@ fun CalculationGuideSheet(
                         .padding(8.dp)
                 ) {
                     Icon(
-                        Icons.Default.HelpOutline,
+                        Icons.AutoMirrored.Filled.HelpOutline,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )

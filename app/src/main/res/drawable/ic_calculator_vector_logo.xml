@@ -3,49 +3,63 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Outer Rounded Calculator Body -->
-    <path
-        android:fillColor="#38BDF8"
-        android:pathData="M30,18 L78,18 C84.6,18 90,23.4 90,30 L90,78 C90,84.6 84.6,90 78,90 L30,90 C23.4,90 18,84.6 18,78 L18,30 C18,23.4 23.4,18 30,18 Z" />
 
-    <!-- Screen Area -->
+    <!-- Ambient Glow / Aura Ring -->
     <path
-        android:fillColor="#0F172A"
-        android:pathData="M26,26 L82,26 C85.3,26 88,28.7 88,32 L88,44 C88,47.3 85.3,50 82,50 L26,50 C22.7,50 20,47.3 20,44 L20,32 C20,28.7 22.7,26 26,26 Z" />
+        android:fillColor="#1500F0FF"
+        android:pathData="M54,10 C78.3,10 98,29.7 98,54 C98,78.3 78.3,98 54,98 C29.7,98 10,78.3 10,54 C10,29.7 29.7,10 54,10 Z" />
 
-    <!-- Screen Glowing Lines / Numbers -->
+    <!-- Outer Luxury Squircle Chassis -->
     <path
-        android:fillColor="#38BDF8"
-        android:pathData="M64,34 L76,34 C77.1,34 78,34.9 78,36 L78,38 C78,39.1 77.1,40 76,40 L64,40 C62.9,40 62,39.1 62,38 L62,36 C62,34.9 62.9,34 64,34 Z" />
+        android:fillColor="#0D111D"
+        android:pathData="M54,16 C76,16 92,20 92,42 L92,66 C92,88 76,92 54,92 C32,92 16,88 16,66 L16,42 C16,20 32,16 54,16 Z" />
 
-    <!-- Key Grid Buttons Row 1 -->
+    <!-- Outer Metallic Chamfer / Border Stroke -->
     <path
-        android:fillColor="#1E293B"
-        android:pathData="M24,56 L38,56 C39.7,56 41,57.3 41,59 L41,67 C41,68.7 39.7,70 38,70 L24,70 C22.3,70 21,68.7 21,67 L21,59 C21,57.3 22.3,56 24,56 Z" />
-    <path
-        android:fillColor="#1E293B"
-        android:pathData="M47,56 L61,56 C62.7,56 64,57.3 64,59 L64,67 C64,68.7 62.7,70 61,70 L47,70 C45.3,70 44,68.7 44,67 L44,59 C44,57.3 45.3,56 47,56 Z" />
-    <path
-        android:fillColor="#0284C7"
-        android:pathData="M70,56 L84,56 C85.7,56 87,57.3 87,59 L87,67 C87,68.7 85.7,70 84,70 L70,70 C68.3,70 67,68.7 67,67 L67,59 C67,57.3 68.3,56 70,56 Z" />
+        android:fillColor="#243048"
+        android:pathData="M54,17 C75,17 91,20.8 91,42 L91,66 C91,87.2 75,91 54,91 C33,91 17,87.2 17,66 L17,42 C17,20.8 33,17 54,17 Z M54,19 C34,19 19,22.6 19,43 L19,65 C19,85.4 34,89 54,89 C74,89 89,85.4 89,65 L89,43 C89,22.6 74,19 54,19 Z" />
 
-    <!-- Key Grid Buttons Row 2 -->
+    <!-- Faceted Isometric Prism Glyph - Top Hexagon Facet (Cyan Glow) -->
     <path
-        android:fillColor="#1E293B"
-        android:pathData="M24,74 L38,74 C39.7,74 41,75.3 41,77 L41,85 C41,86.7 39.7,88 38,88 L24,88 C22.3,88 21,86.7 21,85 L21,77 C21,75.3 22.3,74 24,74 Z" />
-    <path
-        android:fillColor="#1E293B"
-        android:pathData="M47,74 L61,74 C62.7,74 64,75.3 64,77 L64,85 C64,86.7 62.7,88 61,88 L47,88 C45.3,88 44,86.7 44,85 L44,77 C44,75.3 45.3,74 47,74 Z" />
-    <path
-        android:fillColor="#0284C7"
-        android:pathData="M70,74 L84,74 C85.7,74 87,75.3 87,77 L87,85 C87,86.7 85.7,88 84,88 L70,88 C68.3,88 67,86.7 67,85 L67,77 C67,75.3 68.3,74 70,74 Z" />
+        android:fillColor="#00E5FF"
+        android:pathData="M54,26 L76,38 L54,50 L32,38 Z" />
 
-    <!-- Math Symbols (+ and =) -->
+    <!-- Prism Glyph - Left Lower Facet (Deep Cosmic Violet) -->
+    <path
+        android:fillColor="#2A1B4E"
+        android:pathData="M32,38 L54,50 L54,74 L32,62 Z" />
+
+    <!-- Prism Glyph - Right Lower Facet (Electric Indigo / Sapphire) -->
+    <path
+        android:fillColor="#15457A"
+        android:pathData="M54,50 L76,38 L76,62 L54,74 Z" />
+
+    <!-- Floating Mathematical Core: Plus Key Badge -->
+    <path
+        android:fillColor="#00F0FF"
+        android:pathData="M52,32 L56,32 L56,36 L60,36 L60,40 L56,40 L56,44 L52,44 L52,40 L48,40 L48,36 L52,36 Z" />
+
+    <!-- Minus Glyph (Subtle Inset on Left Facet) -->
+    <path
+        android:fillColor="#D1B3FF"
+        android:pathData="M38,53 L48,47 L49.5,49.5 L39.5,55.5 Z" />
+
+    <!-- Multiply Glyph (Right Facet) -->
+    <path
+        android:fillColor="#70B5FF"
+        android:pathData="M60,48 L62,46 L65,51 L68,46 L70,48 L67,53 L70,58 L68,60 L65,55 L62,60 L60,58 L63,53 Z" />
+
+    <!-- Hero Equal Bar / Golden Ratio Accent Bars (Bottom Chassis) -->
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M36,79 L72,79 C73.1,79 74,79.9 74,81 L74,82 C74,83.1 73.1,84 72,84 L36,84 C34.9,84 34,83.1 34,82 L34,81 C34,79.9 34.9,79 36,79 Z" />
+
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M42,86 L66,86 C66.8,86 67.5,86.7 67.5,87.5 C67.5,88.3 66.8,89 66,89 L42,89 C41.2,89 40.5,88.3 40.5,87.5 C40.5,86.7 41.2,86 42,86 Z" />
+
+    <!-- Specular Diamond Highlight on Crown -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M76,60 L78,60 L78,62 L80,62 L80,64 L78,64 L78,66 L76,66 L76,64 L74,64 L74,62 L76,62 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M74,78 L80,78 L80,80 L74,80 Z M74,82 L80,82 L80,84 L74,84 Z" />
+        android:pathData="M54,23 L56,26 L54,29 L52,26 Z" />
 </vector>
