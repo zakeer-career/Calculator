@@ -954,6 +954,49 @@ class CalculatorViewModel(application: Application) : AndroidViewModel(applicati
         lockoutUntilMs = 0L
     }
 
+    /**
+     * Verifies if the provided PIN matches without changing lock state.
+     */
+    fun verifyPin(pin: String): Boolean {
+        val now = System.currentTimeMillis()
+        if (now < lockoutUntilMs) return false
+
+        val pbkdf2Hash = prefs.getString("app_pin_hash_pbkdf2", null)
+        val legacySha256Hash = prefs.getString("app_pin_hash", null)
+        if (pbkdf2Hash == null && legacySha256Hash == null) return true
+
+        var isMatch = false
+        if (pbkdf2Hash != null) {
+            val salt = getOrCreateSecurePinSalt()
+            val computedHash = hashPinPbkdf2(pin, salt)
+            isMatch = java.security.MessageDigest.isEqual(
+                computedHash.toByteArray(Charsets.UTF_8),
+                pbkdf2Hash.toByteArray(Charsets.UTF_8)
+            )
+        } else if (legacySha256Hash != null) {
+            val salt = getOrCreateLegacyPinSalt()
+            val computedHash = hashPinLegacySha256(pin, salt)
+            isMatch = java.security.MessageDigest.isEqual(
+                computedHash.toByteArray(Charsets.UTF_8),
+                legacySha256Hash.toByteArray(Charsets.UTF_8)
+            )
+        }
+
+        if (isMatch) {
+            failedPinAttempts = 0
+            lockoutUntilMs = 0L
+            prefs.edit().remove("app_pin_failed_attempts").remove("app_pin_lockout_until_ms").apply()
+        } else {
+            failedPinAttempts++
+            prefs.edit().putInt("app_pin_failed_attempts", failedPinAttempts).apply()
+            if (failedPinAttempts >= 5) {
+                lockoutUntilMs = System.currentTimeMillis() + 30_000L
+                prefs.edit().putLong("app_pin_lockout_until_ms", lockoutUntilMs).apply()
+            }
+        }
+        return isMatch
+    }
+
     fun unlockApp(pin: String): Boolean {
         val now = System.currentTimeMillis()
         if (now < lockoutUntilMs) {

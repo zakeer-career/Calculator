@@ -156,6 +156,9 @@ fun SettingsScreen(viewModel: CalculatorViewModel) {
 
     var activeSubPage by remember { mutableStateOf<SettingsSubPage?>(null) }
     var showPinDialog by remember { mutableStateOf(false) }
+    var showRemovePinDialog by remember { mutableStateOf(false) }
+    var removePinInput by remember { mutableStateOf("") }
+    var removePinError by remember { mutableStateOf<String?>(null) }
     var pinInput by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf<String?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
@@ -1046,7 +1049,11 @@ fun SettingsScreen(viewModel: CalculatorViewModel) {
                                 }
                             } else {
                                 OutlinedButton(
-                                    onClick = { viewModel.removeAppPin() },
+                                    onClick = {
+                                        removePinInput = ""
+                                        removePinError = null
+                                        showRemovePinDialog = true
+                                    },
                                     modifier = Modifier.testTag("remove_pin_btn")
                                 ) {
                                     Icon(Icons.Default.LockOpen, contentDescription = null)
@@ -1430,6 +1437,57 @@ fun SettingsScreen(viewModel: CalculatorViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { showPinDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // PIN Authentication Challenge Dialog Before Removal (OWASP M3 fix)
+    if (showRemovePinDialog) {
+        AlertDialog(
+            onDismissRequest = { showRemovePinDialog = false },
+            title = { Text("Verify Current PIN") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Enter your current 4-digit PIN to confirm removing passcode security.")
+                    OutlinedTextField(
+                        value = removePinInput,
+                        onValueChange = {
+                            if (it.length <= 4 && it.all { c -> c.isDigit() }) {
+                                removePinInput = it
+                            }
+                        },
+                        label = { Text("Current 4-Digit PIN") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        isError = removePinError != null
+                    )
+                    removePinError?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                ElevatedButton(
+                    onClick = {
+                        if (removePinInput.length == 4) {
+                            if (viewModel.verifyPin(removePinInput)) {
+                                viewModel.removeAppPin()
+                                showRemovePinDialog = false
+                            } else {
+                                removePinError = "Incorrect PIN. Please try again."
+                            }
+                        } else {
+                            removePinError = "PIN must be 4 digits."
+                        }
+                    }
+                ) {
+                    Text("Confirm & Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemovePinDialog = false }) {
                     Text("Cancel")
                 }
             }

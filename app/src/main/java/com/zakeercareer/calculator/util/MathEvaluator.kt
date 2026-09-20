@@ -34,6 +34,25 @@ object MathEvaluator {
             return EvaluationResult.Error("Empty Expression")
         }
 
+        if (trimmed.length > 500) {
+            return EvaluationResult.Error("Expression too long (max 500 chars)")
+        }
+
+        // Limit maximum parentheses nesting depth to avoid stack exhaustion
+        var currentDepth = 0
+        var maxDepth = 0
+        for (ch in trimmed) {
+            if (ch == '(') {
+                currentDepth++
+                if (currentDepth > maxDepth) maxDepth = currentDepth
+            } else if (ch == ')') {
+                currentDepth--
+            }
+        }
+        if (maxDepth > 40) {
+            return EvaluationResult.Error("Parentheses depth limit exceeded (max 40)")
+        }
+
         // Check for trailing binary operators
         val rawClean = trimmed.replace("×", "*").replace("÷", "/").replace("−", "-").trim()
         if (rawClean.endsWith("+") || rawClean.endsWith("-") || rawClean.endsWith("*") ||
@@ -383,7 +402,7 @@ object MathEvaluator {
                         "-" -> a - b
                         "*" -> a * b
                         "/" -> if (b == 0.0) throw ArithmeticException("Cannot divide by zero") else a / b
-                        "%" -> a % b
+                        "%" -> if (b == 0.0) throw ArithmeticException("Cannot modulo by zero") else ((a % b) + b) % b
                         "^" -> a.pow(b)
                         else -> 0.0
                     }
